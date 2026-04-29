@@ -1,8 +1,313 @@
 generator client {
-  provider = "prisma-client"
-  // output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model Department {
+  id                     String                   @id @default(uuid())
+  name                   String                   @unique @db.VarChar(255)
+  code                   String                   @unique @db.VarChar(255)
+  hod_id                 String?
+  hod                    User?                    @relation("DepartmentHOD", fields: [hod_id], references: [id])
+  is_active              Boolean                  @default(true)
+  created_at             DateTime                 @default(now())
+  updated_at             DateTime                 @updatedAt
+  branches               Branch[]
+  user                   User[]                   @relation("DepartmentUsers")
+  coordinatorAssignments CoordinatorAssignments[]
+}
+
+model Branch {
+  id                     String                   @id @default(uuid())
+  department_id          String
+  department             Department               @relation(fields: [department_id], references: [id])
+  name                   String                   @db.VarChar(255)
+  code                   String                   @unique @db.VarChar(255)
+  is_active              Boolean                  @default(true)
+  created_at             DateTime                 @default(now())
+  updated_at             DateTime                 @updatedAt
+  specializations        Specialization[]
+  coordinatorAssignments CoordinatorAssignments[]
+
+  @@unique([name, department_id])
+}
+
+model Specialization {
+  id             String   @id @default(uuid())
+  branch_id      String
+  branch         Branch   @relation(fields: [branch_id], references: [id])
+  name           String   @db.VarChar(255)
+  code           String   @unique @db.VarChar(255)
+  is_active      Boolean  @default(true)
+  duration_years Int      @default(4)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  batches                   Batches[]
+  subjects                  Subjects[]
+  curriculum                Curriculum[]
+  teachingAssignments       TeachingAssignments[]
+  coordinatorAssignments    CoordinatorAssignments[]
+  facultySpecializationMaps FacultySpecializationMap[]
+
+  @@unique([name, branch_id])
+}
+
+model User {
+  id                        String                     @id @default(uuid())
+  name                      String                     @db.VarChar(255)
+  email                     String                     @unique @db.VarChar(255)
+  password_hash             String                     @db.VarChar(255)
+  usn                       String?                    @unique @db.VarChar(255)
+  employee_id               String?                    @unique @db.VarChar(255)
+  phone                     String?                    @unique @db.VarChar(255)
+  department_id             String
+  department                Department                 @relation("DepartmentUsers", fields: [department_id], references: [id])
+  hod_of                    Department[]               @relation("DepartmentHOD")
+  profile_photo_url         String?                    @db.VarChar(500)
+  status                    String                     @default("active") // active, inactive, suspended
+  last_login_at             DateTime?                  @db.Timestamp(3)
+  created_at                DateTime                   @default(now())
+  updated_at                DateTime                   @updatedAt
+  roles                     UserRoles[]
+  grantedRoles              UserRoles[]                @relation("GrantedBy")
+  student_academic_status   StudentAcademicStatus[]
+  enrollments               Enrollments[]
+  teachingAssignments       TeachingAssignments[]
+  replace_by                TeachingAssignments[]      @relation("Replacement")
+  coordinatorAssignments    CoordinatorAssignments[]
+  facultySpecializationMaps FacultySpecializationMap[]
+
+  @@index([department_id])
+  @@index([status])
+  @@index([status, department_id])
+}
+
+model UserRoles {
+  id   String @id @default(uuid())
+  role String @default("student") @db.VarChar(30)
+
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  granted_by String
+  grantedBy  User     @relation("GrantedBy", fields: [granted_by], references: [id])
+  granted_at DateTime @default(now())
+}
+
+model AcademicCycles {
+  id                      String                  @id @default(uuid())
+  name                    String                  @unique @db.VarChar(255)
+  start_date              DateTime
+  end_date                DateTime
+  is_active               Boolean                 @default(true)
+  created_at              DateTime                @default(now())
+  updated_at              DateTime                @updatedAt
+  sections                Sections[]
+  section_subject         SectionSubject[]
+  student_academic_status StudentAcademicStatus[]
+
+  promoted_from_cycles   StudentAcademicStatus[]  @relation("PromotedFromCycle")
+  enrollments            Enrollments[]
+  coordinatorAssignments CoordinatorAssignments[]
+}
+
+model Batches {
+  id                      String                  @id @default(uuid())
+  label                   String                  @unique @db.VarChar(255)
+  start_year              Int
+  end_year                Int
+  is_active               Boolean                 @default(true)
+  created_at              DateTime                @default(now())
+  updated_at              DateTime                @updatedAt
+  specialization_id       String
+  specialization          Specialization          @relation(fields: [specialization_id], references: [id])
+  section                 Sections[]
+  studentAcademicStatuses StudentAcademicStatus[]
+
+  @@unique([start_year, end_year, specialization_id])
+  @@index([specialization_id])
+}
+
+model Sections {
+  id                String           @id @default(uuid())
+  name              String           @db.VarChar(255)
+  batch_id          String
+  batch             Batches          @relation(fields: [batch_id], references: [id])
+  academic_cycle_id String
+  academic_cycle    AcademicCycles   @relation(fields: [academic_cycle_id], references: [id])
+  sectionSubjects   SectionSubject[]
+  enrollments       Enrollments[]
+
+  @@unique([batch_id, academic_cycle_id, name])
+  @@index([batch_id])
+  @@index([academic_cycle_id, batch_id])
+}
+
+model Subjects {
+  id                String         @id @default(uuid())
+  name              String         @db.VarChar(255)
+  code              String         @unique @db.VarChar(255)
+  specialization_id String
+  specialization    Specialization @relation(fields: [specialization_id], references: [id])
+  thumbnail_url     String?        @db.VarChar(500)
+  year              Int
+  semester          Int
+  credits           Int            @default(3)
+  type              String         @db.VarChar(50) // theory, practical, project
+  is_active         Boolean        @default(true)
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+
+  curriculum      Curriculum[]
+  section_subject SectionSubject[]
+
+  @@unique([name, specialization_id])
+  @@index([specialization_id])
+  @@index([specialization_id, year])
+}
+
+model Curriculum {
+  id                String         @id @default(uuid())
+  specialization_id String
+  specialization    Specialization @relation(fields: [specialization_id], references: [id])
+  subject_id        String
+  subject           Subjects       @relation(fields: [subject_id], references: [id])
+  year              Int
+  semester          Int
+  is_elective       Boolean        @default(false)
+  is_active         Boolean        @default(true)
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+
+  @@unique([specialization_id, subject_id, year, semester])
+  @@index([specialization_id])
+  @@index([year, semester])
+  @@index([specialization_id, year, semester])
+}
+
+model SectionSubject {
+  id String @id @default(uuid())
+
+  section_id        String
+  section           Sections       @relation(fields: [section_id], references: [id])
+  subject_id        String
+  subject           Subjects       @relation(fields: [subject_id], references: [id])
+  academic_cycle_id String
+  academic_cycle    AcademicCycles @relation(fields: [academic_cycle_id], references: [id])
+
+  year                Int
+  semester            Int
+  is_active           Boolean               @default(true)
+  teachingAssignments TeachingAssignments[]
+
+  @@unique([section_id, subject_id, academic_cycle_id, year, semester])
+  @@index([section_id, academic_cycle_id])
+}
+
+model StudentAcademicStatus {
+  id String @id @default(uuid())
+
+  student_id String
+  student    User   @relation(fields: [student_id], references: [id])
+  batch_id   String
+
+  batch             Batches        @relation(fields: [batch_id], references: [id])
+  academic_cycle_id String
+  academic_cycle    AcademicCycles @relation(fields: [academic_cycle_id], references: [id])
+
+  current_year           Int
+  current_semester       Int
+  is_active              Boolean        @default(true)
+  status                 String         @default("promoted") // promoted | detained | lateral_entry | dropped | graduated
+  remarks                String?        @db.VarChar(500)
+  promoted_from_cycle_id String
+  promoted_from_cycle    AcademicCycles @relation("PromotedFromCycle", fields: [promoted_from_cycle_id], references: [id])
+  created_at             DateTime       @default(now())
+  updated_at             DateTime       @updatedAt
+
+  @@unique([student_id, academic_cycle_id])
+  @@index([student_id])
+}
+
+model Enrollments {
+  id                String         @id @default(uuid())
+  student_id        String
+  student           User           @relation(fields: [student_id], references: [id])
+  section_id        String
+  section           Sections       @relation(fields: [section_id], references: [id])
+  academic_cycle_id String
+  academic_cycle    AcademicCycles @relation(fields: [academic_cycle_id], references: [id])
+  year              Int
+  semester          Int
+  status            String         @default("active")
+  enrolled_at       DateTime       @default(now())
+
+  @@unique([student_id, academic_cycle_id, year, semester])
+  @@index([section_id, academic_cycle_id])
+  @@index([student_id, academic_cycle_id])
+}
+
+model TeachingAssignments {
+  id                 String         @id @default(uuid())
+  section_subject_id String
+  section_subject    SectionSubject @relation(fields: [section_subject_id], references: [id])
+  faculty_id         String
+  faculty            User           @relation(fields: [faculty_id], references: [id])
+  specialization_id  String
+  specialization     Specialization @relation(fields: [specialization_id], references: [id])
+  type               String         @default("theory") @db.VarChar(50) // theory, practical, project
+  is_primary         Boolean        @default(true)
+  is_active          Boolean        @default(true)
+  replace_by         String?
+  replaced_by        User?          @relation("Replacement", fields: [replace_by], references: [id])
+  assigned_at        DateTime       @default(now())
+
+  @@unique([section_subject_id, faculty_id, type])
+  @@index([faculty_id, specialization_id])
+  @@index([section_subject_id])
+}
+
+model CoordinatorAssignments {
+  id            String     @id @default(uuid())
+  faculty_id    String
+  faculty       User       @relation(fields: [faculty_id], references: [id])
+  department_id String
+  department    Department @relation(fields: [department_id], references: [id])
+
+  specialization_id String
+  specialization    Specialization @relation(fields: [specialization_id], references: [id])
+  academic_cycle_id String
+  academic_cycle    AcademicCycles @relation(fields: [academic_cycle_id], references: [id])
+  assigned_at       DateTime       @default(now())
+  year              Int
+  semester          Int
+  is_active         Boolean        @default(true)
+  branch            Branch?        @relation(fields: [branchId], references: [id])
+  branchId          String?
+
+  @@unique([faculty_id, department_id, specialization_id, academic_cycle_id, year, semester])
+  @@index([faculty_id])
+  @@index([department_id])
+  @@index([specialization_id])
+  @@index([academic_cycle_id])
+}
+
+model FacultySpecializationMap {
+  id                String         @id @default(uuid())
+  faculty_id        String
+  faculty           User           @relation(fields: [faculty_id], references: [id])
+  specialization_id String
+  specialization    Specialization @relation(fields: [specialization_id], references: [id])
+  is_active         Boolean        @default(true)
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+  is_primary_specs  Boolean        @default(true)
+  assigned_at       DateTime       @default(now())
+
+  @@unique([faculty_id, specialization_id])
+  @@index([faculty_id])
+  @@index([specialization_id])
 }
