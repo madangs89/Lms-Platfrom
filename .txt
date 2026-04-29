@@ -1,0 +1,44 @@
+POSTGRES 
+
+// To See All Database
+SELECT datname from pg_database;
+
+
+// Creating Database
+CREATE DATABASE love;
+
+// To delete Database
+DROP DATABASE love;
+
+
+
+// Crud
+
+    1 Creating Table
+        CREATE TABLE person();
+
+    2 Inserting Value 
+        INSERT INTO person()
+        insert into users 
+        values
+        (101 , 'Raju' , 'Bengaluru');
+
+
+    3 Read 
+        select * from users
+        where id = 11; 
+
+    4 Update
+        update users 
+        set id = 1
+        where id = 101;
+
+    5 Delete        
+        delete from users 
+        where id = 11;
+
+
+// Data Types
+
+
+
