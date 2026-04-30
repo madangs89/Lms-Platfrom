@@ -87,13 +87,12 @@ model User {
 }
 
 model UserRoles {
-  id   String @id @default(uuid())
-  role String @default("student") @db.VarChar(30)
-
+  id         String   @id @default(uuid())
+  role       String   @default("student") @db.VarChar(30)
   user_id    String
   user       User     @relation(fields: [user_id], references: [id])
-  granted_by String
-  grantedBy  User     @relation("GrantedBy", fields: [granted_by], references: [id])
+  granted_by String?
+  grantedBy  User?    @relation("GrantedBy", fields: [granted_by], references: [id])
   granted_at DateTime @default(now())
 }
 
