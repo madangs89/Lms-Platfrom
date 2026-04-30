@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 export const createUser = async (req, res) => {
   try {
     const { name, email, password, department_id, roles } = req.body;
-    const currentUserId = req.user.id;
+    const currentUserId = req?.user?.id || null;
     if (!name || !email || !password) {
       return res
         .status(400)
@@ -27,7 +27,7 @@ export const createUser = async (req, res) => {
         data: {
           name,
           email,
-          password: hashedPassword,
+          password_hash: hashedPassword,
           department_id,
         },
       });
@@ -38,7 +38,7 @@ export const createUser = async (req, res) => {
             return {
               user_id: newUser.id,
               role,
-              granted_by: currentUserId,
+              granted_by: currentUserId ? currentUserId : newUser.id, // if no user is logged in, assume self-grant (e.g. during initial setup)
             };
           }),
         });
@@ -60,6 +60,8 @@ export const createUser = async (req, res) => {
       data: user,
     });
   } catch (error) {
+    console.log(error);
+
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
         return res.status(400).json({

@@ -1,5 +1,5 @@
 import express from "express";
-import { createUser } from "../controllers/user.controler";
+import { createUser } from "../controllers/user.controler.js";
 const userRouter = express.Router();
 
 // Admin Routes

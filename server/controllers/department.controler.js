@@ -3,20 +3,22 @@ import { prisma } from "../config/prisma.js";
 
 export const createDepartment = async (req, res) => {
   try {
-    const { name, code } = req.body;
+    let { name, code } = req.body;
 
     if (!name || !code) {
       return res
         .status(400)
         .json({ message: "All fields are required", success: false });
     }
+
+    name = name.trim().toUpperCase();
+    code = code.trim().toUpperCase();
     const department = await prisma.department.create({
       data: {
         name,
         code,
       },
     });
-
     if (!department) {
       return res
         .status(500)
@@ -31,10 +33,18 @@ export const createDepartment = async (req, res) => {
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
+        const fields = error.meta?.target || [];
+
+        let message = "Duplicate value";
+
+        if (fields.includes("name")) {
+          message = "Department name already exists";
+        } else if (fields.includes("code")) {
+          message = "Department code already exists";
+        }
+
         return res.status(400).json({
-          message:
-            "Department with this name or code already exists : " +
-            error.meta.target.join(", "),
+          message,
           success: false,
         });
       }
