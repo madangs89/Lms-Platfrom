@@ -61,3 +61,91 @@ export const createDepartment = async (req, res) => {
       .json({ message: "Internal server error", success: false });
   }
 };
+
+export const getAllDepartments = async (req, res) => {
+  try {
+    const departments = await prisma.department.findMany({
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return res.status(200).json({
+      departments,
+      success: true,
+      message: "Departments retrieved successfully",
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Internal server error", success: false });
+  }
+};
+
+export const getSingleDepartment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({
+        message: "Department ID is required",
+        success: false,
+      });
+    }
+    const department = await prisma.department.findUnique({
+      where: { id },
+    });
+
+    if (!department) {
+      return res.status(404).json({
+        message: "Department not found",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      department,
+      success: true,
+      message: "Department retrieved successfully",
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Internal server error", success: false });
+  }
+};
+
+export const toggleActive = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({
+        message: "Department ID is required",
+        success: false,
+      });
+    }
+    const department = await prisma.department.findUnique({
+      where: { id },
+    });
+
+    if (!department) {
+      return res.status(404).json({
+        message: "Department not found",
+        success: false,
+      });
+    }
+
+    const updatedDepartment = await prisma.department.update({
+      where: { id },
+      data: { is_active: !department.is_active },
+    });
+
+    return res.status(200).json({
+      department: updatedDepartment,
+      success: true,
+      message: `Department active status toggled successfully. Toggled To ${updatedDepartment.is_active ? "Active" : "Inactive"}`,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Internal server error", success: false });
+  }
+};
