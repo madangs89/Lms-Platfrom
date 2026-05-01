@@ -2,7 +2,9 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   isAuthenticated: false,
-  user: null,
+  user: {
+    roles:["admin"]
+  },
 };
 
 export const counterSlice = createSlice({
