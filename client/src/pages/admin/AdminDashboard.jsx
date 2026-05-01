@@ -1,33 +1,51 @@
 import MetricCard from "@/mycomponents/admin/MetricCard";
 import Greeting from "@/mycomponents/shared/Greeting";
-import { User } from "lucide-react";
+import {
+  Users,
+  Building2,
+  GitBranch,
+  GraduationCap,
+  CalendarDays,
+} from "lucide-react";
 import React from "react";
 import { useSelector } from "react-redux";
 
 const AdminDashboard = () => {
   const theme = useSelector((state) => state.theme);
-  let colors = theme[theme.currentTheme];
-  const isDark = theme.currentTheme === "dark";
+  const colors = theme[theme.currentTheme];
+
+  const loading = false; // flip to true to see skeleton
 
   return (
     <div>
-      {/* <h1
-        className="text-xl font-semibold"
-        style={{
-          color: colors.textPrimary,
-        }}
-      >
-        Dashboard
-      </h1> */}
-
       <Greeting name="Admin" isAdmin={true} />
 
-      <div className="flex flex-wrap w-full gap-2 mt-3">
-        <MetricCard title="Users" value="123" Icon={User} />
-        <MetricCard title="Departments" value="123" Icon={User} />
-        <MetricCard title="Branches" value="123" Icon={User} />
-        <MetricCard title="Specializations" value="123" Icon={User} />
-        <MetricCard title="Batches" value="123" Icon={User} />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-4 w-full">
+        <MetricCard title="Users" value="123" Icon={Users} loading={loading} />
+        <MetricCard
+          title="Departments"
+          value="123"
+          Icon={Building2}
+          loading={loading}
+        />
+        <MetricCard
+          title="Branches"
+          value="123"
+          Icon={GitBranch}
+          loading={loading}
+        />
+        <MetricCard
+          title="Specializations"
+          value="123"
+          Icon={GraduationCap}
+          loading={loading}
+        />
+        <MetricCard
+          title="Batches"
+          value="123"
+          Icon={CalendarDays}
+          loading={loading}
+        />
       </div>
     </div>
   );
