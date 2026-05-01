@@ -100,7 +100,7 @@ export const getCountOfActiveStudents = async (req, res) => {
     const count = await prisma.user.count({
       where: {
         status: "active",
-        userRoles: {
+        roles: {
           some: {
             role: "student",
           },
@@ -113,6 +113,8 @@ export const getCountOfActiveStudents = async (req, res) => {
       message: "Count of active students retrieved successfully",
     });
   } catch (error) {
+    console.log(error);
+
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       return res.status(400).json({
         message: "Bad request: " + error.message,
