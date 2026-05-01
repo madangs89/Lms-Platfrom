@@ -32,6 +32,9 @@ const initialState = {
 
     shadow: "rgba(0,0,0,0.45)",
     illustrationCircle: "#1a2e20",
+
+    sidebarClr: "#203227",
+    sidebarText: "#ffffff",
   },
 
   light: {
@@ -65,6 +68,10 @@ const initialState = {
 
     shadow: "rgba(0,0,0,0.07)",
     illustrationCircle: "#e4f0e8",
+
+    sidebarClr: "#203227",
+
+    sidebarText: "#ffffff",
   },
 
   currentTheme: localStorage.getItem("theme") || "light",

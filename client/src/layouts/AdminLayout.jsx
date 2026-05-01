@@ -1,21 +1,32 @@
+import { useSelector } from "react-redux";
 import { Outlet } from "react-router-dom";
 
-const AdminLayout = () => {
-  return (
-    <div className="flex w-screen h-screen">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white p-4">
-        <h2 className="text-lg font-bold mb-4">Admin</h2>
+import { useState } from "react";
+import SideBar from "@/mycomponents/shared/SideBar";
+import { adminSideBar } from "@/configs/sidebarconfigs";
 
-        <nav className="flex flex-col gap-2">
-          <a href="/admin">Dashboard</a>
-          <a href="/admin/users">Users</a>
-          <a href="/admin/settings">Settings</a>
-        </nav>
-      </aside>
+const AdminLayout = () => {
+  const theme = useSelector((state) => state.theme);
+  let colors = theme[theme.currentTheme];
+  const isDark = theme.currentTheme === "dark";
+
+  const [activeTab, setActiveTab] = useState("Dashboard");
+
+  return (
+    <div
+      style={{ backgroundColor: colors.background, color: colors.textPrimary }}
+      className="flex w-screen h-screen overflow-hidden"
+    >
+      {/* SideBar */}
+
+      <SideBar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        sidebarLinks={adminSideBar}
+      />
 
       {/* Main content */}
-      <main className="flex-1 p-6 bg-gray-100">
+      <main className="flex-1 p-6 ">
         <Outlet />
       </main>
     </div>
