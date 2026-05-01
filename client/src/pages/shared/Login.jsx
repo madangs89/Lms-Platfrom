@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 
 const Login = () => {
   const theme = useSelector((state) => state.theme);
-   const colors = theme[theme.currentTheme];
+  const colors = theme[theme.currentTheme];
   return (
     <div
       style={{ background: colors.background }}

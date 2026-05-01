@@ -2,62 +2,72 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   dark: {
-    background: "#0B0F0E",
-    surface: "#121817",
-    card: "#1A2220",
+    background: "#111714",
+    surface: "#161b16",
+    card: "#1c2220",
 
-    textPrimary: "#ffffff",
-    textSecondary: "#A3B3AD",
-    textMuted: "#6B7C75",
+    textPrimary: "#f0f4f0",
+    textSecondary: "#8fa398",
+    textMuted: "#4b5e54",
 
-    primary: "#22C55E",
-    primaryHover: "#16A34A",
-    primarySoft: "#163D2B",
+    primary: "#3dba5c",
+    primaryHover: "#34a350",
+    primarySoft: "#1a3326",
 
-    border: "#24312D",
-    divider: "#1F2A27",
+    border: "#2a3630",
+    divider: "#222d28",
 
-    success: "#22C55E",
+    success: "#3dba5c",
     warning: "#F59E0B",
     danger: "#EF4444",
     info: "#3B82F6",
 
-    inputBg: "#121817",
-    inputBorder: "#2A3A35",
-    inputText: "#E6F4EA",
+    inputBg: "#1c2220",
+    inputBorder: "#2e3d37",
+    inputText: "#e8f0eb",
+    inputPlaceholder: "#556860",
 
-    shadow: "rgba(0,0,0,0.4)",
+    socialBg: "#1c2220",
+    socialBorder: "#2e3d37",
+
+    shadow: "rgba(0,0,0,0.45)",
+    illustrationCircle: "#1a2e20",
   },
 
   light: {
-    background: "#F8FAF9",
-    surface: "#FFFFFF",
-    card: "#FFFFFF",
+    background: "#f2f5f2",
+    surface: "#ffffff",
+    card: "#ffffff",
 
-    textPrimary: "#0F172A",
-    textSecondary: "#475569",
-    textMuted: "#94A3B8",
+    textPrimary: "#141f18",
+    textSecondary: "#5a7060",
+    textMuted: "#97aaa0",
 
-    primary: "#16A34A",
-    primaryHover: "#15803D",
-    primarySoft: "#DCFCE7",
+    primary: "#2a7a3f",
+    primaryHover: "#236833",
+    primarySoft: "#e4f4e9",
 
-    border: "#E2E8F0",
-    divider: "#EEF2F7",
+    border: "#dde8e1",
+    divider: "#edf3ef",
 
-    success: "#16A34A",
+    success: "#2a7a3f",
     warning: "#F59E0B",
     danger: "#EF4444",
     info: "#3B82F6",
 
-    inputBg: "#FFFFFF",
-    inputBorder: "#D1D5DB",
-    inputText: "#0F172A",
+    inputBg: "#ffffff",
+    inputBorder: "#cdd8d2",
+    inputText: "#141f18",
+    inputPlaceholder: "#97aaa0",
 
-    shadow: "rgba(0,0,0,0.05)",
+    socialBg: "#ffffff",
+    socialBorder: "#dde8e1",
+
+    shadow: "rgba(0,0,0,0.07)",
+    illustrationCircle: "#e4f0e8",
   },
 
-  currentTheme: "light",
+  currentTheme: localStorage.getItem("theme") || "light",
 };
 
 export const themeSlice = createSlice({
@@ -65,8 +75,8 @@ export const themeSlice = createSlice({
   initialState,
   reducers: {
     toggleTheme: (state) => {
-      state.currentTheme =
-        state.currentTheme === "light" ? "dark" : "light";
+      state.currentTheme = state.currentTheme === "light" ? "dark" : "light";
+      localStorage.setItem("theme", state.currentTheme);
     },
   },
 });
