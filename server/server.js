@@ -8,7 +8,14 @@ import userRouter from "./routes/user.routes.js";
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: `${process.env.CLIENT_URL}`,
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  }),
+);
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
@@ -17,11 +24,10 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
+app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/user", userRouter);
 
-app.use("/api/v1/auth" , authRouter)
-app.use("/api/v1/user" , userRouter)
-
-app.use("/api/v1/department" , departmentRouter)
+app.use("/api/v1/department", departmentRouter);
 
 app.listen(3000, async () => {
   await connectPrisma();

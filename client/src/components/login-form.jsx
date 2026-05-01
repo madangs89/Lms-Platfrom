@@ -8,9 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Moon, Sun, User, Lock } from "lucide-react";
+import { Spinner } from "./ui/spinner";
+import axios from "axios";
+import { login } from "@/redux/slices/auth.slice";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const dispatch = useDispatch();
+
+  const navigate = useNavigate();
   const theme = useSelector((state) => state.theme);
   const c = theme[theme.currentTheme]; // shorthand for colors
   const isDark = theme.currentTheme === "dark";
@@ -23,10 +30,35 @@ export default function LoginPage() {
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1500);
+
+    if (!form.email || !form.password)
+      return toast.error("All fields are required.");
+
+    try {
+      setLoading(true);
+      const data = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/login`,
+        form,
+        {
+          withCredentials: true,
+        },
+      );
+      if (data.data.success) {
+        const { user, token } = data.data;
+        toast.success("Login successful!");
+        dispatch(login(user));
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error(
+        error.response?.data?.message || "An error occurred during login.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -255,7 +287,7 @@ export default function LoginPage() {
                   border: "none",
                 }}
               >
-                {loading ? "Logging in..." : "Login"}
+                {loading ? <Spinner /> : "Login"}
               </Button>
 
               {/* Divider */}
