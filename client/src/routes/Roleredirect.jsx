@@ -1,7 +1,10 @@
+import axios from "axios";
+import { useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Navigate } from "react-router-dom";
 
 const RoleRedirect = () => {
+ 
   const { isAuthenticated, user } = useSelector((state) => state.auth);
 
   console.log(isAuthenticated, user);

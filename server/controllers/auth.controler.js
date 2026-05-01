@@ -165,6 +165,7 @@ export const me = async (req, res) => {
         success: false,
       });
     }
+    currentUser.roles = currentUser.roles.map((r) => r.role);
 
     return res.status(200).json({
       success: true,
