@@ -82,6 +82,33 @@ export const getAllDepartments = async (req, res) => {
   }
 };
 
+export const getCountOfActiveDepartments = async (req, res) => {
+  try {
+    // need to handle caching here
+    const count = await prisma.department.count({
+      where: {
+        is_active: true,
+      },
+    });
+
+    return res.status(200).json({
+      count,
+      success: true,
+      message: "Count of active departments retrieved successfully",
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return res.status(400).json({
+        message: "Bad request: " + error.message,
+        success: false,
+      });
+    }
+    return res
+      .status(500)
+      .json({ message: "Internal server error", success: false });
+  }
+};
+
 export const getSingleDepartment = async (req, res) => {
   try {
     const { id } = req.params;

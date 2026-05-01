@@ -94,3 +94,33 @@ export const createUser = async (req, res) => {
     });
   }
 };
+
+export const getCountOfActiveStudents = async (req, res) => {
+  try {
+    const count = await prisma.user.count({
+      where: {
+        status: "active",
+        userRoles: {
+          some: {
+            role: "student",
+          },
+        },
+      },
+    });
+    return res.status(200).json({
+      count,
+      success: true,
+      message: "Count of active students retrieved successfully",
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return res.status(400).json({
+        message: "Bad request: " + error.message,
+        success: false,
+      });
+    }
+    return res
+      .status(500)
+      .json({ message: "Internal server error", success: false });
+  }
+};
