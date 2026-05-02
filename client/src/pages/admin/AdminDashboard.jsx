@@ -17,7 +17,7 @@ const AdminDashboard = () => {
   const loading = false; // flip to true to see skeleton
 
   return (
-    <div>
+    <div className="w-full h-full">
       <Greeting name="Admin" isAdmin={true} />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-4 w-full">

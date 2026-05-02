@@ -114,17 +114,18 @@ model AcademicCycles {
 }
 
 model Batches {
-  id                      String                  @id @default(uuid())
-  label                   String                  @unique @db.VarChar(255)
+  id                      String                   @id @default(uuid())
+  label                   String                   @unique @db.VarChar(255)
   start_year              Int
   end_year                Int
-  is_active               Boolean                 @default(true)
-  created_at              DateTime                @default(now())
-  updated_at              DateTime                @updatedAt
+  is_active               Boolean                  @default(true)
+  created_at              DateTime                 @default(now())
+  updated_at              DateTime                 @updatedAt
   specialization_id       String
-  specialization          Specialization          @relation(fields: [specialization_id], references: [id])
+  specialization          Specialization           @relation(fields: [specialization_id], references: [id])
   section                 Sections[]
   studentAcademicStatuses StudentAcademicStatus[]
+  coordinatorAssignments  CoordinatorAssignments[]
 
   @@unique([start_year, end_year, specialization_id])
   @@index([specialization_id])
@@ -275,6 +276,9 @@ model CoordinatorAssignments {
   faculty       User       @relation(fields: [faculty_id], references: [id])
   department_id String
   department    Department @relation(fields: [department_id], references: [id])
+
+  batch_id String // ✅ ADD THIS
+  batch    Batches @relation(fields: [batch_id], references: [id])
 
   specialization_id String
   specialization    Specialization @relation(fields: [specialization_id], references: [id])

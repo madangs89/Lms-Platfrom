@@ -1,11 +1,13 @@
 import React from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 const SideBar = ({ activeTab, setActiveTab, sidebarLinks }) => {
   const theme = useSelector((state) => state.theme);
   let colors = theme[theme.currentTheme];
   const isDark = theme.currentTheme === "dark";
 
+  const navigate = useNavigate();
   return (
     <aside
       style={{
@@ -35,7 +37,10 @@ const SideBar = ({ activeTab, setActiveTab, sidebarLinks }) => {
                   : colors.textPrimary,
             }}
             className={`flex items-center gap-3 p-2 text-sm rounded-md transition-colors cursor-pointer `}
-            onClick={() => setActiveTab(link.name)}
+            onClick={() => {
+              setActiveTab(link.name);
+              navigate(link.link);
+            }}
           >
             <link.icon size={20} />
             <span>{link.name}</span>
