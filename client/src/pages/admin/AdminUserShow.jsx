@@ -14,7 +14,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, X } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import MetricCard from "@/mycomponents/admin/MetricCard";
+import {
+  GraduationCap,
+  Plus,
+  ShieldUser,
+  UserRoundPen,
+  UserStar,
+  X,
+} from "lucide-react";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 
@@ -41,10 +60,27 @@ const INITIAL_FORM = {
   status: "active",
 };
 
+const allTabs = [
+  { id: "all", label: "All Users" },
+  { id: "students", label: "Students" },
+  { id: "lecturers", label: "Lecturers" },
+  { id: "hods", label: "HODs" },
+  { id: "admins", label: "Admins" },
+];
+
+let limit = 10;
+
 const AdminUserShow = () => {
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
   const isDark = theme.currentTheme === "dark";
+  const [activeTab, setActiveTab] = useState("all");
+
+  const [data, setData] = useState([]);
+  const [currentPaginationData, setCurrentPaginationData] = useState([]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
@@ -72,6 +108,249 @@ const AdminUserShow = () => {
     setOpen(false);
     setForm(INITIAL_FORM);
   };
+
+  const ALL_USERS = [
+    {
+      id: "usr-1",
+      name: "Arjun Sharma",
+      email: "arjun.sharma@college.edu",
+      phone: "+91 98765 43001",
+      role: "student",
+      department: "Computer Science",
+      usn: "1RN21CS001",
+      employee_id: null,
+      status: "active",
+      joined: "15 Jan 2022",
+    },
+    {
+      id: "usr-2",
+      name: "Priya Nair",
+      email: "priya.nair@college.edu",
+      phone: "+91 98765 43002",
+      role: "student",
+      department: "Information Science",
+      usn: "1RN21IS024",
+      employee_id: null,
+      status: "active",
+      joined: "16 Jan 2022",
+    },
+    {
+      id: "usr-3",
+      name: "Rohan Mehta",
+      email: "rohan.mehta@college.edu",
+      phone: "+91 98765 43003",
+      role: "student",
+      department: "Electronics & Communication",
+      usn: "1RN21EC045",
+      employee_id: null,
+      status: "inactive",
+      joined: "17 Jan 2022",
+    },
+    {
+      id: "usr-4",
+      name: "Sneha Rao",
+      email: "sneha.rao@college.edu",
+      phone: "+91 98765 43004",
+      role: "student",
+      department: "Mechanical Engineering",
+      usn: "1RN21ME012",
+      employee_id: null,
+      status: "active",
+      joined: "18 Jan 2022",
+    },
+    {
+      id: "usr-5",
+      name: "Karthik Reddy",
+      email: "karthik.reddy@college.edu",
+      phone: "+91 98765 43005",
+      role: "student",
+      department: "Civil Engineering",
+      usn: "1RN21CE033",
+      employee_id: null,
+      status: "active",
+      joined: "19 Jan 2022",
+    },
+    {
+      id: "usr-6",
+      name: "Dr. Sarah Johnson",
+      email: "sarah.johnson@college.edu",
+      phone: "+91 98765 43006",
+      role: "lecturer",
+      department: "Computer Science",
+      usn: null,
+      employee_id: "EMP-FS1023",
+      status: "active",
+      joined: "10 Jan 2021",
+    },
+    {
+      id: "usr-7",
+      name: "Prof. Michael Brown",
+      email: "michael.brown@college.edu",
+      phone: "+91 98765 43007",
+      role: "lecturer",
+      department: "Information Science",
+      usn: null,
+      employee_id: "EMP-FS1045",
+      status: "active",
+      joined: "05 Feb 2021",
+    },
+    {
+      id: "usr-8",
+      name: "Dr. Emily Davis",
+      email: "emily.davis@college.edu",
+      phone: "+91 98765 43008",
+      role: "lecturer",
+      department: "Electronics & Communication",
+      usn: null,
+      employee_id: "EMP-FS1067",
+      status: "inactive",
+      joined: "12 Mar 2021",
+    },
+    {
+      id: "usr-9",
+      name: "Prof. Ravi Kumar",
+      email: "ravi.kumar@college.edu",
+      phone: "+91 98765 43009",
+      role: "lecturer",
+      department: "Mechanical Engineering",
+      usn: null,
+      employee_id: "EMP-FS1089",
+      status: "active",
+      joined: "20 Apr 2021",
+    },
+    {
+      id: "usr-10",
+      name: "Dr. Anita Desai",
+      email: "anita.desai@college.edu",
+      phone: "+91 98765 43010",
+      role: "lecturer",
+      department: "Civil Engineering",
+      usn: null,
+      employee_id: "EMP-FS1101",
+      status: "active",
+      joined: "01 May 2021",
+    },
+    {
+      id: "usr-11",
+      name: "Dr. John Smith",
+      email: "john.smith@college.edu",
+      phone: "+91 98765 44001",
+      role: "hod",
+      department: "Computer Science",
+      usn: null,
+      employee_id: "HOD001",
+      status: "active",
+      joined: "01 Jan 2020",
+    },
+    {
+      id: "usr-12",
+      name: "Dr. Lisa Anderson",
+      email: "lisa.anderson@college.edu",
+      phone: "+91 98765 44002",
+      role: "hod",
+      department: "Information Science",
+      usn: null,
+      employee_id: "HOD002",
+      status: "active",
+      joined: "15 Jan 2020",
+    },
+    {
+      id: "usr-13",
+      name: "Dr. Suresh Babu",
+      email: "suresh.babu@college.edu",
+      phone: "+91 98765 44003",
+      role: "hod",
+      department: "Electronics & Communication",
+      usn: null,
+      employee_id: "HOD003",
+      status: "active",
+      joined: "20 Jan 2020",
+    },
+    {
+      id: "usr-14",
+      name: "Dr. Kavitha Menon",
+      email: "kavitha.menon@college.edu",
+      phone: "+91 98765 44004",
+      role: "hod",
+      department: "Mechanical Engineering",
+      usn: null,
+      employee_id: "HOD004",
+      status: "inactive",
+      joined: "25 Jan 2020",
+    },
+    {
+      id: "usr-15",
+      name: "Dr. Prakash Hegde",
+      email: "prakash.hegde@college.edu",
+      phone: "+91 98765 44005",
+      role: "hod",
+      department: "Civil Engineering",
+      usn: null,
+      employee_id: "HOD005",
+      status: "active",
+      joined: "30 Jan 2020",
+    },
+    {
+      id: "usr-16",
+      name: "Vikram Patel",
+      email: "vikram.patel@college.edu",
+      phone: "+91 98765 43011",
+      role: "student",
+      department: "Computer Science",
+      usn: "1RN22CS011",
+      employee_id: null,
+      status: "active",
+      joined: "10 Aug 2022",
+    },
+    {
+      id: "usr-17",
+      name: "Divya Kumar",
+      email: "divya.kumar@college.edu",
+      phone: "+91 98765 43012",
+      role: "student",
+      department: "Information Science",
+      usn: "1RN22IS019",
+      employee_id: null,
+      status: "active",
+      joined: "11 Aug 2022",
+    },
+    {
+      id: "usr-18",
+      name: "Rahul Gupta",
+      email: "rahul.gupta@college.edu",
+      phone: "+91 98765 43013",
+      role: "admin",
+      department: "Computer Science",
+      usn: null,
+      employee_id: null,
+      status: "active",
+      joined: "01 Jan 2019",
+    },
+    {
+      id: "usr-19",
+      name: "Meera Iyer",
+      email: "meera.iyer@college.edu",
+      phone: "+91 98765 43014",
+      role: "admin",
+      department: "Information Science",
+      usn: null,
+      employee_id: null,
+      status: "active",
+      joined: "15 Mar 2019",
+    },
+    {
+      id: "usr-20",
+      name: "Anjali Singh",
+      email: "anjali.singh@college.edu",
+      phone: "+91 98765 43015",
+      role: "student",
+      department: "Electronics & Communication",
+      usn: "1RN22EC027",
+      employee_id: null,
+      status: "suspended",
+      joined: "12 Aug 2022",
+    },
+  ];
 
   const isStudent = form.role === "student";
   const isLecturer = ["lecturer", "hod"].includes(form.role);
@@ -104,6 +383,71 @@ const AdminUserShow = () => {
           <Plus className="w-4 h-4" />
           Add Users
         </Button>
+      </div>
+
+      {/*Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-4 w-full">
+        <MetricCard
+          title="Students"
+          value="1243"
+          Icon={GraduationCap}
+          loading={false}
+        />
+        <MetricCard
+          title="Faculties"
+          value="130"
+          Icon={UserRoundPen}
+          loading={false}
+        />
+        <MetricCard title="Hods" value="10" Icon={UserStar} loading={false} />
+        <MetricCard
+          title="Admins"
+          value="3"
+          Icon={ShieldUser}
+          loading={false}
+        />
+      </div>
+
+      {/* Tables */}
+      <div
+        className="w-full mt-3 h-screen"
+        style={{
+          border: `1px solid ${colors.border}`,
+        }}
+      >
+        {allTabs.map((tab, index) => {
+          return <Button key={index}>{tab.label}</Button>;
+        })}
+
+        <Table>
+          <TableCaption>A list of your recent invoices.</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Department</TableHead>
+              <TableHead>Contact</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {ALL_USERS.map((data) => (
+              <TableRow key={data.id}>
+                <TableCell className="font-medium">{data.name}</TableCell>
+                <TableCell>{data.role}</TableCell>
+                <TableCell>{data.department}</TableCell>
+                <TableCell>{data.phone}</TableCell>
+                <TableCell>{data.status}</TableCell>
+                <TableCell>
+                  <Button variant="ghost" size="sm">
+                    Edit
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Modal */}

@@ -223,8 +223,8 @@ model StudentAcademicStatus {
   is_active              Boolean        @default(true)
   status                 String         @default("promoted") // promoted | detained | lateral_entry | dropped | graduated
   remarks                String?        @db.VarChar(500)
-  promoted_from_cycle_id String
-  promoted_from_cycle    AcademicCycles @relation("PromotedFromCycle", fields: [promoted_from_cycle_id], references: [id])
+  promoted_from_cycle_id String?
+  promoted_from_cycle    AcademicCycles? @relation("PromotedFromCycle", fields: [promoted_from_cycle_id], references: [id])
   created_at             DateTime       @default(now())
   updated_at             DateTime       @updatedAt
 
