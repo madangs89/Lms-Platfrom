@@ -134,7 +134,7 @@ export const getAllUsersWthPagination = async (req, res) => {
 
     if (
       activeTab &&
-      !["students", "faculties", "hods", "admins", "all"].includes(activeTab)
+      !["student", "faculty", "hod", "admin", "all"].includes(activeTab)
     ) {
       return res.status(400).json({
         message: "Invalid activeTab value",
@@ -178,7 +178,7 @@ export const getAllUsersWthPagination = async (req, res) => {
         message: "Users retrieved successfully",
       });
     } else {
-      const roleFilter = activeTab.slice(0, -1);
+      const roleFilter = activeTab;
 
       const [users, total] = await prisma.$transaction([
         prisma.user.findMany({
@@ -231,6 +231,126 @@ export const getAllUsersWthPagination = async (req, res) => {
       });
     }
   } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+export const searchUsers = async (req, res) => {
+  try {
+    const { query } = req.params;
+
+    if (!query || query.trim() === "") {
+      return res.status(400).json({
+        message: "Search query cannot be empty",
+        success: false,
+      });
+    }
+
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { email: { contains: query, mode: "insensitive" } },
+          { usn: { contains: query, mode: "insensitive" } },
+          { employee_id: { contains: query, mode: "insensitive" } },
+          { phone: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        usn: true,
+        employee_id: true,
+        phone: true,
+        roles: {
+          select: {
+            role: true,
+          },
+        },
+        department: {
+          select: {
+            name: true,
+            code: true,
+          },
+        },
+      },
+    });
+    return res.status(200).json({
+      users,
+      success: true,
+      message: "Users retrieved successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+export const getCountOfAllUserOnTheBasisOfRole = async (req, res) => {
+  try {
+    const [studentsCount, facultyCount, hodCount, adminCount] =
+      await prisma.$transaction([
+        prisma.user.count({
+          where: {
+            roles: {
+              some: {
+                role: "student",
+              },
+            },
+          },
+        }),
+        prisma.user.count({
+          where: {
+            roles: {
+              some: {
+                role: "faculty",
+              },
+            },
+          },
+        }),
+        prisma.user.count({
+          where: {
+            roles: {
+              some: {
+                role: "hod",
+              },
+            },
+          },
+        }),
+        prisma.user.count({
+          where: {
+            roles: {
+              some: {
+                role: "admin",
+              },
+            },
+          },
+        }),
+      ]);
+
+    const payload = {
+      student: studentsCount,
+      faculty: facultyCount,
+      hod: hodCount,
+      admin: adminCount,
+    };
+    return res.status(200).json({
+      counts: payload,
+      success: true,
+      message: "User counts retrieved successfully",
+    });
+  } catch (error) {
+    console.log(error);
     return res.status(500).json({
       message: "Internal server error",
       success: false,

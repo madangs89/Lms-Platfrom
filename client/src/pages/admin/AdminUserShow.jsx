@@ -17,27 +17,31 @@ import {
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MetricCard from "@/mycomponents/admin/MetricCard";
+import axios from "axios";
 import {
+  ChevronLeft,
+  ChevronRight,
   GraduationCap,
+  Pencil,
   Plus,
+  Search,
   ShieldUser,
   UserRoundPen,
   UserStar,
-  X,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 
-// Dummy departments — replace with DB fetch later
+// ── Constants ─────────────────────────────────────────────────────────────────
+const LIMIT = 5;
+
 const DEPARTMENTS = [
   { id: "dept-cs", name: "Computer Science" },
   { id: "dept-ec", name: "Electronics & Communication" },
@@ -45,9 +49,7 @@ const DEPARTMENTS = [
   { id: "dept-ce", name: "Civil Engineering" },
   { id: "dept-is", name: "Information Science" },
 ];
-
 const ROLES = ["student", "lecturer", "hod", "admin"];
-
 const INITIAL_FORM = {
   name: "",
   email: "",
@@ -59,430 +61,644 @@ const INITIAL_FORM = {
   employee_id: "",
   status: "active",
 };
-
-const allTabs = [
-  { id: "all", label: "All Users" },
-  { id: "students", label: "Students" },
-  { id: "lecturers", label: "Lecturers" },
-  { id: "hods", label: "HODs" },
-  { id: "admins", label: "Admins" },
+const ALL_TABS = [
+  { id: "all", label: "All" },
+  { id: "student", label: "Students" },
+  { id: "lecturer", label: "Lecturers" },
+  { id: "hod", label: "HODs" },
+  { id: "admin", label: "Admins" },
 ];
 
-let limit = 10;
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const roleBadge = (role) =>
+  ({
+    student: { bg: "#e8f5e9", color: "#2e7d32" },
+    lecturer: { bg: "#e3f2fd", color: "#1565c0" },
+    hod: { bg: "#fff8e1", color: "#f57f17" },
+    admin: { bg: "#fce4ec", color: "#c62828" },
+  })[role] ?? { bg: "#f0f0f0", color: "#555" };
 
+const statusBadge = (status) =>
+  ({
+    active: { bg: "#e8f5e9", color: "#2e7d32" },
+    inactive: { bg: "#fce4ec", color: "#c62828" },
+    suspended: { bg: "#fff3e0", color: "#e65100" },
+  })[status] ?? { bg: "#f0f0f0", color: "#555" };
+
+const getPageNumbers = (current, total) => {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
+  if (current >= total - 3)
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  return [1, "...", current - 1, current, current + 1, "...", total];
+};
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+const SkeletonRow = ({ colors, cols }) => (
+  <TableRow>
+    {Array.from({ length: cols }).map((_, i) => (
+      <TableCell key={i}>
+        <div
+          className="h-4 rounded animate-pulse"
+          style={{
+            background: colors.border,
+            width: i === 0 ? "120px" : "70px",
+          }}
+        />
+      </TableCell>
+    ))}
+  </TableRow>
+);
+
+const PageBtn = ({ children, onClick, active, disabled, colors }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className="w-7 h-7 rounded flex items-center justify-center text-[12px] font-medium transition-colors"
+    style={{
+      background: active ? colors.primary : "transparent",
+      color: active
+        ? "#fff"
+        : disabled
+          ? colors.textMuted
+          : colors.textSecondary,
+      cursor: disabled ? "not-allowed" : "pointer",
+      border: `1px solid ${active ? colors.primary : colors.border}`,
+    }}
+  >
+    {children}
+  </button>
+);
+
+const Field = ({ label, required, children, colors }) => (
+  <div className="flex flex-col gap-1.5">
+    <Label
+      className="text-[12px] font-medium"
+      style={{ color: colors.textSecondary }}
+    >
+      {label}
+      {required && <span className="ml-0.5 text-red-400">*</span>}
+    </Label>
+    {children}
+  </div>
+);
+
+const inputStyle = (colors) => ({
+  background: colors.inputBg,
+  borderColor: colors.inputBorder,
+  color: colors.inputText,
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 const AdminUserShow = () => {
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
-  const isDark = theme.currentTheme === "dark";
+
+  // Table state
   const [activeTab, setActiveTab] = useState("all");
-
-  const [data, setData] = useState([]);
-  const [currentPaginationData, setCurrentPaginationData] = useState([]);
-
-  const [currentPage, setCurrentPage] = useState(1);
+  const [users, setUsers] = useState([]);
+  const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
 
+  const [countLoading, setCountLoading] = useState(false);
+
+  const [roleCounts, setRoleCounts] = useState({
+    student: 0,
+    faculty: 0,
+    hod: 0,
+    admin: 0,
+  });
+
+  // Search
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const searchTimeout = useRef(null);
+
+  // Modal
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
 
-  const handleChange = (field, value) => {
-    setForm((prev) => {
-      const updated = { ...prev, [field]: value };
-      // Clear role-specific fields on role change
-      if (field === "role") {
-        updated.usn = "";
-        updated.employee_id = "";
+  // Responsive: hide some columns on small screens
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
+  // ── Fetch ─────────────────────────────────────────────────────────────────
+  const fetchUsers = useCallback(async (tab, pg) => {
+    setLoading(true);
+    try {
+      const { data } = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/all/${pg}/${LIMIT}/${tab}`,
+        { withCredentials: true },
+      );
+      if (data.success) {
+        setUsers(data.users);
+        setTotal(data.total);
+        setTotalPages(Math.ceil(data.total / LIMIT));
       }
-      return updated;
-    });
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!search) fetchUsers(activeTab, page);
+  }, [activeTab, page, fetchUsers, search]);
+
+  // ── Search debounce ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!search.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const { data } = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/search/${encodeURIComponent(search.trim())}`,
+          { withCredentials: true },
+        );
+        if (data.success) setSearchResults(data.users ?? []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 400);
+    return () => clearTimeout(searchTimeout.current);
+  }, [search]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setCountLoading(true);
+        const data = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/get-role-user-count`,
+          { withCredentials: true },
+        );
+        if (data.data.success) {
+          setCountLoading(false);
+          setRoleCounts(data.data.counts);
+        }
+      } catch (error) {
+        console.log(error);
+
+        toast.error("Failed to fetch user counts");
+      } finally {
+        setCountLoading(false);
+      }
+    })();
+  }, []);
+
+  const displayRows = search.trim() ? (searchResults ?? []) : users;
+  const isSearchMode = !!search.trim();
+  const showSkeleton = loading || (isSearchMode && searching);
+
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    setPage(1);
+    setSearch("");
+    setSearchResults(null);
   };
 
+  // ── Form ──────────────────────────────────────────────────────────────────
+  const handleChange = (field, value) => {
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "role") {
+        next.usn = "";
+        next.employee_id = "";
+      }
+      return next;
+    });
+  };
   const handleSubmit = () => {
-    console.log("New user payload:", form);
-    // TODO: dispatch API call
+    console.log(form);
     setOpen(false);
     setForm(INITIAL_FORM);
   };
-
   const handleClose = () => {
     setOpen(false);
     setForm(INITIAL_FORM);
   };
-
-  const ALL_USERS = [
-    {
-      id: "usr-1",
-      name: "Arjun Sharma",
-      email: "arjun.sharma@college.edu",
-      phone: "+91 98765 43001",
-      role: "student",
-      department: "Computer Science",
-      usn: "1RN21CS001",
-      employee_id: null,
-      status: "active",
-      joined: "15 Jan 2022",
-    },
-    {
-      id: "usr-2",
-      name: "Priya Nair",
-      email: "priya.nair@college.edu",
-      phone: "+91 98765 43002",
-      role: "student",
-      department: "Information Science",
-      usn: "1RN21IS024",
-      employee_id: null,
-      status: "active",
-      joined: "16 Jan 2022",
-    },
-    {
-      id: "usr-3",
-      name: "Rohan Mehta",
-      email: "rohan.mehta@college.edu",
-      phone: "+91 98765 43003",
-      role: "student",
-      department: "Electronics & Communication",
-      usn: "1RN21EC045",
-      employee_id: null,
-      status: "inactive",
-      joined: "17 Jan 2022",
-    },
-    {
-      id: "usr-4",
-      name: "Sneha Rao",
-      email: "sneha.rao@college.edu",
-      phone: "+91 98765 43004",
-      role: "student",
-      department: "Mechanical Engineering",
-      usn: "1RN21ME012",
-      employee_id: null,
-      status: "active",
-      joined: "18 Jan 2022",
-    },
-    {
-      id: "usr-5",
-      name: "Karthik Reddy",
-      email: "karthik.reddy@college.edu",
-      phone: "+91 98765 43005",
-      role: "student",
-      department: "Civil Engineering",
-      usn: "1RN21CE033",
-      employee_id: null,
-      status: "active",
-      joined: "19 Jan 2022",
-    },
-    {
-      id: "usr-6",
-      name: "Dr. Sarah Johnson",
-      email: "sarah.johnson@college.edu",
-      phone: "+91 98765 43006",
-      role: "lecturer",
-      department: "Computer Science",
-      usn: null,
-      employee_id: "EMP-FS1023",
-      status: "active",
-      joined: "10 Jan 2021",
-    },
-    {
-      id: "usr-7",
-      name: "Prof. Michael Brown",
-      email: "michael.brown@college.edu",
-      phone: "+91 98765 43007",
-      role: "lecturer",
-      department: "Information Science",
-      usn: null,
-      employee_id: "EMP-FS1045",
-      status: "active",
-      joined: "05 Feb 2021",
-    },
-    {
-      id: "usr-8",
-      name: "Dr. Emily Davis",
-      email: "emily.davis@college.edu",
-      phone: "+91 98765 43008",
-      role: "lecturer",
-      department: "Electronics & Communication",
-      usn: null,
-      employee_id: "EMP-FS1067",
-      status: "inactive",
-      joined: "12 Mar 2021",
-    },
-    {
-      id: "usr-9",
-      name: "Prof. Ravi Kumar",
-      email: "ravi.kumar@college.edu",
-      phone: "+91 98765 43009",
-      role: "lecturer",
-      department: "Mechanical Engineering",
-      usn: null,
-      employee_id: "EMP-FS1089",
-      status: "active",
-      joined: "20 Apr 2021",
-    },
-    {
-      id: "usr-10",
-      name: "Dr. Anita Desai",
-      email: "anita.desai@college.edu",
-      phone: "+91 98765 43010",
-      role: "lecturer",
-      department: "Civil Engineering",
-      usn: null,
-      employee_id: "EMP-FS1101",
-      status: "active",
-      joined: "01 May 2021",
-    },
-    {
-      id: "usr-11",
-      name: "Dr. John Smith",
-      email: "john.smith@college.edu",
-      phone: "+91 98765 44001",
-      role: "hod",
-      department: "Computer Science",
-      usn: null,
-      employee_id: "HOD001",
-      status: "active",
-      joined: "01 Jan 2020",
-    },
-    {
-      id: "usr-12",
-      name: "Dr. Lisa Anderson",
-      email: "lisa.anderson@college.edu",
-      phone: "+91 98765 44002",
-      role: "hod",
-      department: "Information Science",
-      usn: null,
-      employee_id: "HOD002",
-      status: "active",
-      joined: "15 Jan 2020",
-    },
-    {
-      id: "usr-13",
-      name: "Dr. Suresh Babu",
-      email: "suresh.babu@college.edu",
-      phone: "+91 98765 44003",
-      role: "hod",
-      department: "Electronics & Communication",
-      usn: null,
-      employee_id: "HOD003",
-      status: "active",
-      joined: "20 Jan 2020",
-    },
-    {
-      id: "usr-14",
-      name: "Dr. Kavitha Menon",
-      email: "kavitha.menon@college.edu",
-      phone: "+91 98765 44004",
-      role: "hod",
-      department: "Mechanical Engineering",
-      usn: null,
-      employee_id: "HOD004",
-      status: "inactive",
-      joined: "25 Jan 2020",
-    },
-    {
-      id: "usr-15",
-      name: "Dr. Prakash Hegde",
-      email: "prakash.hegde@college.edu",
-      phone: "+91 98765 44005",
-      role: "hod",
-      department: "Civil Engineering",
-      usn: null,
-      employee_id: "HOD005",
-      status: "active",
-      joined: "30 Jan 2020",
-    },
-    {
-      id: "usr-16",
-      name: "Vikram Patel",
-      email: "vikram.patel@college.edu",
-      phone: "+91 98765 43011",
-      role: "student",
-      department: "Computer Science",
-      usn: "1RN22CS011",
-      employee_id: null,
-      status: "active",
-      joined: "10 Aug 2022",
-    },
-    {
-      id: "usr-17",
-      name: "Divya Kumar",
-      email: "divya.kumar@college.edu",
-      phone: "+91 98765 43012",
-      role: "student",
-      department: "Information Science",
-      usn: "1RN22IS019",
-      employee_id: null,
-      status: "active",
-      joined: "11 Aug 2022",
-    },
-    {
-      id: "usr-18",
-      name: "Rahul Gupta",
-      email: "rahul.gupta@college.edu",
-      phone: "+91 98765 43013",
-      role: "admin",
-      department: "Computer Science",
-      usn: null,
-      employee_id: null,
-      status: "active",
-      joined: "01 Jan 2019",
-    },
-    {
-      id: "usr-19",
-      name: "Meera Iyer",
-      email: "meera.iyer@college.edu",
-      phone: "+91 98765 43014",
-      role: "admin",
-      department: "Information Science",
-      usn: null,
-      employee_id: null,
-      status: "active",
-      joined: "15 Mar 2019",
-    },
-    {
-      id: "usr-20",
-      name: "Anjali Singh",
-      email: "anjali.singh@college.edu",
-      phone: "+91 98765 43015",
-      role: "student",
-      department: "Electronics & Communication",
-      usn: "1RN22EC027",
-      employee_id: null,
-      status: "suspended",
-      joined: "12 Aug 2022",
-    },
-  ];
-
   const isStudent = form.role === "student";
   const isLecturer = ["lecturer", "hod"].includes(form.role);
+  const pages = getPageNumbers(page, totalPages);
+
+  // Columns shown at each breakpoint
+  // mobile: User + Role + Status
+  // desktop: all 6
+  const desktopCols = [
+    "User",
+    "Role",
+    "Department",
+    "Contact",
+    "Status",
+    "Actions",
+  ];
+  const mobileCols = ["User", "Role", "Status", "Actions"];
+  const cols = isMobile ? mobileCols : desktopCols;
 
   return (
-    <div className="w-full h-full">
-      {/* Header */}
-      <div className="flex w-full justify-between items-center">
-        <div className="mt-3 flex flex-col gap-1">
+    <div className="w-full flex flex-col gap-4 overflow-scroll h-screen">
+      {/* ── Header ── */}
+      <div className="flex w-full justify-between items-center mt-3">
+        <div className="flex flex-col gap-0.5">
           <h1
-            className="text-2xl font-semibold"
+            className="text-xl sm:text-2xl font-semibold"
             style={{ color: colors.textPrimary }}
           >
             Users
           </h1>
-          <p className="text-muted-foreground text-[14px]">
-            {"Dashboard > Users"}
+          <p
+            className="text-[12px] sm:text-[13px]"
+            style={{ color: colors.textSecondary }}
+          >
+            Dashboard &gt; Users
           </p>
         </div>
-
         <Button
-          variant="ghost"
           onClick={() => setOpen(true)}
-          style={{
-            background: colors.primaryHover,
-            color: colors.sidebarText,
-          }}
-          className="flex items-center gap-1 p-2 text-[13px] rounded-md transition-colors cursor-pointer"
+          className="flex items-center gap-1 px-3 h-9 text-[13px] rounded-md flex-shrink-0"
+          style={{ background: colors.primaryHover, color: colors.sidebarText }}
         >
           <Plus className="w-4 h-4" />
-          Add Users
+          <span className="hidden sm:inline">Add User</span>
+          <span className="sm:hidden">Add</span>
         </Button>
       </div>
 
-      {/*Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-4 w-full">
+      {/* ── Metric Cards — always 4 in a row, shrink on small ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MetricCard
           title="Students"
-          value="1243"
+          value={roleCounts.student}
           Icon={GraduationCap}
-          loading={false}
+          loading={countLoading}
         />
         <MetricCard
           title="Faculties"
-          value="130"
+          value={roleCounts.faculty}
           Icon={UserRoundPen}
-          loading={false}
+          loading={countLoading}
         />
-        <MetricCard title="Hods" value="10" Icon={UserStar} loading={false} />
+        <MetricCard
+          title="HODs"
+          value={roleCounts.hod}
+          Icon={UserStar}
+          loading={countLoading}
+        />
         <MetricCard
           title="Admins"
-          value="3"
+          value={roleCounts.admin}
           Icon={ShieldUser}
-          loading={false}
+          loading={countLoading}
         />
       </div>
 
-      {/* Tables */}
+      {/* ── Table Card ── */}
       <div
-        className="w-full mt-3 h-screen"
-        style={{
-          border: `1px solid ${colors.border}`,
-        }}
+        className="rounded-lg border w-full "
+        style={{ borderColor: colors.border, background: colors.card }}
       >
-        {allTabs.map((tab, index) => {
-          return <Button key={index}>{tab.label}</Button>;
-        })}
-
-        <Table>
-          <TableCaption>A list of your recent invoices.</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {ALL_USERS.map((data) => (
-              <TableRow key={data.id}>
-                <TableCell className="font-medium">{data.name}</TableCell>
-                <TableCell>{data.role}</TableCell>
-                <TableCell>{data.department}</TableCell>
-                <TableCell>{data.phone}</TableCell>
-                <TableCell>{data.status}</TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="sm">
-                    Edit
-                  </Button>
-                </TableCell>
-              </TableRow>
+        {/* Tabs row */}
+        <div
+          className="border-b overflow-x-auto"
+          style={{ borderColor: colors.border }}
+        >
+          <div className="flex min-w-max px-2 pt-1">
+            {ALL_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => switchTab(tab.id)}
+                className="px-3 sm:px-4 py-2.5 text-[12px] sm:text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap"
+                style={{
+                  borderColor:
+                    activeTab === tab.id ? colors.primary : "transparent",
+                  color:
+                    activeTab === tab.id
+                      ? colors.primary
+                      : colors.textSecondary,
+                  background: "transparent",
+                }}
+              >
+                {tab.label}
+              </button>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+        </div>
+
+        {/* Search bar */}
+        <div
+          className="px-3 sm:px-4 py-2.5 border-b"
+          style={{ borderColor: colors.border }}
+        >
+          <div
+            className="flex items-center gap-2 px-3 h-8 rounded-md border w-full sm:w-64"
+            style={{
+              background: colors.inputBg,
+              borderColor: colors.inputBorder,
+            }}
+          >
+            {searching ? (
+              <div
+                className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin flex-shrink-0"
+                style={{
+                  borderColor: colors.primary,
+                  borderTopColor: "transparent",
+                }}
+              />
+            ) : (
+              <Search
+                className="w-3.5 h-3.5 flex-shrink-0"
+                style={{ color: colors.textMuted }}
+              />
+            )}
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search users..."
+              className="outline-none bg-transparent flex-1 text-[13px] min-w-0"
+              style={{ color: colors.inputText }}
+            />
+            {search && (
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setSearchResults(null);
+                }}
+                className="text-[11px] flex-shrink-0"
+                style={{ color: colors.textMuted }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-auto w-full ">
+          <Table className="w-full">
+            <TableHeader>
+              <TableRow style={{ borderBottom: `1px solid ${colors.border}` }}>
+                {cols.map((h) => (
+                  <TableHead
+                    key={h}
+                    className="text-[11px] sm:text-[12px] font-medium whitespace-nowrap px-3 sm:px-4"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    {h}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {showSkeleton &&
+                Array.from({ length: LIMIT }).map((_, i) => (
+                  <SkeletonRow key={i} colors={colors} cols={cols.length} />
+                ))}
+
+              {!showSkeleton && displayRows.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={cols.length}
+                    className="text-center py-10 text-[13px]"
+                    style={{ color: colors.textMuted }}
+                  >
+                    No users found.
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!showSkeleton &&
+                displayRows.map((user) => {
+                  const roleStr =
+                    user.roles?.map((r) => r.role).join(", ") ??
+                    user.role ??
+                    "—";
+                  const firstRole = user.roles?.[0]?.role ?? user.role;
+                  const rb = roleBadge(firstRole);
+                  const sb = statusBadge(user.status);
+                  const identifier = user.roles?.some(
+                    (r) => r.role === "student",
+                  )
+                    ? `USN: ${user.usn ?? "—"}`
+                    : user.roles?.some((r) =>
+                          ["lecturer", "hod"].includes(r.role),
+                        )
+                      ? `EMP: ${user.employee_id ?? "—"}`
+                      : null;
+                  const deptName =
+                    user.department?.name ?? user.department ?? "—";
+
+                  return (
+                    <TableRow
+                      key={user.id}
+                      style={{ borderBottom: `1px solid ${colors.divider}` }}
+                    >
+                      {/* User — always shown */}
+                      <TableCell className="px-3 sm:px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white text-[11px] sm:text-[12px] font-semibold flex-shrink-0"
+                            style={{ background: colors.primary }}
+                          >
+                            {user.name?.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <p
+                              className="text-[12px] sm:text-[13px] font-medium leading-tight truncate"
+                              style={{ color: colors.textPrimary }}
+                            >
+                              {user.name}
+                            </p>
+                            {identifier && (
+                              <p
+                                className="text-[10px] sm:text-[11px] truncate"
+                                style={{ color: colors.textSecondary }}
+                              >
+                                {identifier}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      {/* Role — always shown */}
+                      <TableCell className="px-3 sm:px-4 py-2.5">
+                        <span
+                          className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-medium capitalize whitespace-nowrap"
+                          style={{ background: rb.bg, color: rb.color }}
+                        >
+                          {roleStr}
+                        </span>
+                      </TableCell>
+
+                      {/* Department — desktop only */}
+                      {!isMobile && (
+                        <TableCell
+                          className="px-4 py-2.5 text-[13px] max-w-[160px]"
+                          style={{ color: colors.textPrimary }}
+                        >
+                          <span className="truncate block">{deptName}</span>
+                        </TableCell>
+                      )}
+
+                      {/* Contact — desktop only */}
+                      {!isMobile && (
+                        <TableCell className="px-4 py-2.5">
+                          <p
+                            className="text-[12px] truncate max-w-[160px]"
+                            style={{ color: colors.textPrimary }}
+                          >
+                            {user.email}
+                          </p>
+                          <p
+                            className="text-[11px]"
+                            style={{ color: colors.textSecondary }}
+                          >
+                            {user.phone ?? "—"}
+                          </p>
+                        </TableCell>
+                      )}
+
+                      {/* Status — always shown */}
+                      <TableCell className="px-3 sm:px-4 py-2.5">
+                        <span
+                          className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-medium capitalize whitespace-nowrap"
+                          style={{ background: sb.bg, color: sb.color }}
+                        >
+                          {user.status}
+                        </span>
+                      </TableCell>
+
+                      {/* Actions — always shown */}
+                      <TableCell className="px-3 sm:px-4 py-2.5">
+                        <button
+                          className="p-1 sm:p-1.5 rounded hover:opacity-70 transition-opacity"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          <Pencil className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination */}
+        {!isSearchMode && (
+          <div
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-3 sm:px-4 py-3 border-t gap-2"
+            style={{ borderColor: colors.border }}
+          >
+            <p
+              className="text-[11px] sm:text-[12px]"
+              style={{ color: colors.textSecondary }}
+            >
+              {total === 0
+                ? "No results"
+                : `Showing ${(page - 1) * LIMIT + 1}–${Math.min(page * LIMIT, total)} of ${total}`}
+            </p>
+
+            <div className="flex items-center gap-1 flex-wrap">
+              <PageBtn
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1 || loading}
+                colors={colors}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </PageBtn>
+
+              {pages.map((p, i) =>
+                p === "..." ? (
+                  <span
+                    key={`d-${i}`}
+                    className="w-6 text-center text-[12px]"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    …
+                  </span>
+                ) : (
+                  <PageBtn
+                    key={p}
+                    onClick={() => setPage(p)}
+                    active={page === p}
+                    disabled={loading}
+                    colors={colors}
+                  >
+                    {p}
+                  </PageBtn>
+                ),
+              )}
+
+              <PageBtn
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages || loading}
+                colors={colors}
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </PageBtn>
+            </div>
+          </div>
+        )}
+
+        {/* Search footer */}
+        {isSearchMode && !searching && searchResults !== null && (
+          <div
+            className="px-3 sm:px-4 py-2.5 border-t"
+            style={{ borderColor: colors.border }}
+          >
+            <p className="text-[12px]" style={{ color: colors.textSecondary }}>
+              {searchResults.length} result
+              {searchResults.length !== 1 ? "s" : ""} for "{search}"
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Modal */}
+      {/* ── Add User Modal ── */}
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent
-          className="sm:max-w-[520px] p-0 overflow-hidden border"
+          className="w-[95vw] sm:max-w-[520px] p-0 overflow-hidden border"
           style={{
             background: colors.card,
             borderColor: colors.border,
             color: colors.textPrimary,
           }}
         >
-          {/* Modal Header */}
           <DialogHeader
-            className="px-6 py-4 border-b"
+            className="px-4 sm:px-6 py-4 border-b"
             style={{ borderColor: colors.divider }}
           >
             <DialogTitle
-              className="text-[17px] font-semibold"
+              className="text-[16px] sm:text-[17px] font-semibold"
               style={{ color: colors.textPrimary }}
             >
               Add New User
             </DialogTitle>
             <p
-              className="text-[13px] mt-0.5"
+              className="text-[12px] sm:text-[13px] mt-0.5"
               style={{ color: colors.textSecondary }}
             >
               Fill in the details to create a new user account.
             </p>
           </DialogHeader>
 
-          {/* Form Body */}
-          <div className="px-6 py-5 flex flex-col gap-4 max-h-[68vh] overflow-y-auto">
-            {/* Name + Email */}
-            <div className="grid grid-cols-2 gap-4">
+          <div className="px-4 sm:px-6 py-4 flex flex-col gap-3 sm:gap-4 max-h-[70vh] overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <Field label="Full Name" required colors={colors}>
                 <Input
                   placeholder="John Doe"
@@ -504,8 +720,7 @@ const AdminUserShow = () => {
               </Field>
             </div>
 
-            {/* Password + Phone */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <Field label="Password" required colors={colors}>
                 <Input
                   type="password"
@@ -527,8 +742,7 @@ const AdminUserShow = () => {
               </Field>
             </div>
 
-            {/* Department + Role */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <Field label="Department" required colors={colors}>
                 <Select
                   value={form.department_id}
@@ -547,13 +761,13 @@ const AdminUserShow = () => {
                       color: colors.textPrimary,
                     }}
                   >
-                    {DEPARTMENTS.map((dept) => (
+                    {DEPARTMENTS.map((d) => (
                       <SelectItem
-                        key={dept.id}
-                        value={dept.id}
+                        key={d.id}
+                        value={d.id}
                         className="text-[13px]"
                       >
-                        {dept.name}
+                        {d.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -592,7 +806,6 @@ const AdminUserShow = () => {
               </Field>
             </div>
 
-            {/* Conditional: USN for student */}
             {isStudent && (
               <Field label="USN" required colors={colors}>
                 <Input
@@ -604,8 +817,6 @@ const AdminUserShow = () => {
                 />
               </Field>
             )}
-
-            {/* Conditional: Employee ID for lecturer/hod */}
             {isLecturer && (
               <Field label="Employee ID" required colors={colors}>
                 <Input
@@ -618,7 +829,6 @@ const AdminUserShow = () => {
               </Field>
             )}
 
-            {/* Status */}
             <Field label="Status" colors={colors}>
               <Select
                 value={form.status}
@@ -651,9 +861,8 @@ const AdminUserShow = () => {
             </Field>
           </div>
 
-          {/* Footer */}
           <div
-            className="flex justify-end gap-2 px-6 py-4 border-t"
+            className="flex justify-end gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t"
             style={{ borderColor: colors.divider }}
           >
             <Button
@@ -684,26 +893,5 @@ const AdminUserShow = () => {
     </div>
   );
 };
-
-// Small helper to keep field wrappers clean
-const Field = ({ label, required, children, colors }) => (
-  <div className="flex flex-col gap-1.5">
-    <Label
-      className="text-[12px] font-medium"
-      style={{ color: colors.textSecondary }}
-    >
-      {label}
-      {required && <span className="ml-0.5 text-red-400">*</span>}
-    </Label>
-    {children}
-  </div>
-);
-
-// Consistent input styling from theme
-const inputStyle = (colors) => ({
-  background: colors.inputBg,
-  borderColor: colors.inputBorder,
-  color: colors.inputText,
-});
 
 export default AdminUserShow;
