@@ -1,5 +1,9 @@
 import express from "express";
-import { createUser, getCountOfActiveStudents } from "../controllers/user.controler.js";
+import {
+  createUser,
+  getAllUsersWthPagination,
+  getCountOfActiveStudents,
+} from "../controllers/user.controler.js";
 import { authMiddleware } from "../middlewares/auth.middelware.js";
 import { adminMiddleware } from "../middlewares/admin.middelwares.js";
 const userRouter = express.Router();
@@ -10,6 +14,12 @@ userRouter.get(
   authMiddleware,
   adminMiddleware,
   getCountOfActiveStudents,
+);
+userRouter.get(
+  "/all/:page/:limit/:activeTab",
+  authMiddleware,
+  adminMiddleware,
+  getAllUsersWthPagination,
 );
 userRouter.post("/create", authMiddleware, adminMiddleware, createUser);
 

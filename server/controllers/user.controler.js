@@ -126,3 +126,114 @@ export const getCountOfActiveStudents = async (req, res) => {
       .json({ message: "Internal server error", success: false });
   }
 };
+
+export const getAllUsersWthPagination = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, activeTab } = req.params;
+    const offset = (page - 1) * limit;
+
+    if (
+      activeTab &&
+      !["students", "faculties", "hods", "admins", "all"].includes(activeTab)
+    ) {
+      return res.status(400).json({
+        message: "Invalid activeTab value",
+        success: false,
+      });
+    }
+
+    if (activeTab === "all") {
+      const [users, total] = await prisma.$transaction([
+        prisma.user.findMany({
+          skip: offset,
+          take: parseInt(limit),
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            status: true,
+            usn: true,
+            employee_id: true,
+            phone: true,
+            roles: {
+              select: {
+                role: true,
+              },
+            },
+            department: {
+              select: {
+                name: true,
+                code: true,
+              },
+            },
+          },
+        }),
+        prisma.user.count(),
+      ]);
+
+      return res.status(200).json({
+        users,
+        total,
+        success: true,
+        message: "Users retrieved successfully",
+      });
+    } else {
+      const roleFilter = activeTab.slice(0, -1);
+
+      const [users, total] = await prisma.$transaction([
+        prisma.user.findMany({
+          skip: offset,
+          take: parseInt(limit),
+          where: {
+            roles: {
+              some: {
+                role: roleFilter,
+              },
+            },
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            status: true,
+            usn: true,
+            employee_id: true,
+            phone: true,
+            roles: {
+              select: {
+                role: true,
+              },
+            },
+            department: {
+              select: {
+                name: true,
+                code: true,
+              },
+            },
+          },
+        }),
+        prisma.user.count({
+          where: {
+            roles: {
+              some: {
+                role: roleFilter,
+              },
+            },
+          },
+        }),
+      ]);
+
+      return res.status(200).json({
+        users,
+        total,
+        success: true,
+        message: "Users retrieved successfully",
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
