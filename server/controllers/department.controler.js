@@ -204,6 +204,26 @@ export const getCountOfDepartmentsActiveAndInactiveAndTotalAndWithHods = async (
   }
 };
 
+export const getDepatmentsWhichDontHaveHod = async (req, res) => {
+  try {
+    const departments = await prisma.department.findMany({
+      where: {
+        hod_id: null,
+      },
+    });
+    return res.status(200).json({
+      departments,
+      success: true,
+      message: "Departments without HOD retrieved successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", success: false });
+  }
+};
+
 export const getCountOfActiveDepartments = async (req, res) => {
   try {
     // need to handle caching here

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import {
-    Dialog,
+  Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -9,15 +9,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    Select,
+  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
-
-import React from "react";
+import React, { useEffect } from "react";
+import toast from "react-hot-toast";
 
 const Field = ({ label, required, children, colors }) => (
   <div className="flex flex-col gap-1.5">
@@ -44,7 +46,52 @@ const AddUser = ({
   handleSubmit,
 }) => {
   const isStudent = form.role === "student";
-  const isLecturer = ["lecturer", "hod"].includes(form.role);
+  const isLecturer = ["faculty", "hod"].includes(form.role);
+  const isHOD = form.role === "hod";
+
+  const fetchTheDepartmentsWhichDontHaveHod = async () => {
+    const { data } = await axios.get(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/departments-without-hod`,
+      {
+        withCredentials: true,
+      },
+    );
+
+    return data.departments;
+  };
+
+  const availableHodDepartmentsQuery = useQuery({
+    queryKey: ["available-hod-departments"],
+    queryFn: fetchTheDepartmentsWhichDontHaveHod,
+    enabled: isHOD,
+    refetchOnWindowFocus: false,
+    retry: 3,
+  });
+
+  useEffect(() => {
+    if (availableHodDepartmentsQuery.error) {
+      toast.error(
+        availableHodDepartmentsQuery.error?.response?.data?.message ||
+          availableHodDepartmentsQuery.error.message ||
+          "Failed to fetch available HOD departments",
+      );
+    }
+  }, [availableHodDepartmentsQuery.error]);
+
+  useEffect(() => {
+    if (
+      !availableHodDepartmentsQuery.isLoading &&
+      availableHodDepartmentsQuery.data.length === 0
+    ) {
+      toast.error(
+        "No departments available for HOD role. Please create a department first.",
+      );
+      handleChange("role", "");
+    }
+  }, [
+    availableHodDepartmentsQuery.isLoading,
+    availableHodDepartmentsQuery.data,
+  ]);
 
   return (
     <div>
@@ -205,6 +252,47 @@ const AddUser = ({
                   className="h-9 text-[13px] border rounded-md"
                 />
               </Field>
+            )}
+
+            {isHOD &&
+            availableHodDepartmentsQuery.data &&
+            availableHodDepartmentsQuery.data.length > 0 ? (
+              <Field label="Available Hod Roles" required colors={colors}>
+                <Select
+                  value={form.hod_department_id}
+                  onValueChange={(v) => handleChange("hod_department_id", v)}
+                >
+                  <SelectTrigger
+                    className="h-9 text-[13px] border rounded-md"
+                    style={inputStyle(colors)}
+                  >
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent
+                    style={{
+                      background: colors.card,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.textPrimary,
+                    }}
+                  >
+                    {availableHodDepartmentsQuery.data.map((d) => (
+                      <SelectItem
+                        key={d.id}
+                        value={d.id}
+                        className="text-[13px]"
+                      >
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            ) : (
+              isHOD && (
+                <div>
+                  <p>No available HOD roles</p>
+                </div>
+              )
             )}
 
             <Field label="Status" colors={colors}>

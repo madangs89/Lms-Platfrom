@@ -1,63 +1,134 @@
 import bcrypt from "bcrypt";
 import { prisma } from "../config/prisma.js";
 import { Prisma } from "@prisma/client";
+
+const ALLOWED_ROLES = ["student", "faculty", "hod", "admin"];
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, department_id, roles } = req.body;
-    const currentUserId = req?.user?.id || null;
-    if (!name || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: "All fields are required", success: false });
+    const {
+      name,
+      email,
+      password,
+      phone,
+      department_id,
+      role,
+      usn,
+      employee_id,
+      status,
+      hod_department_id,
+    } = req.body;
+
+    if (!name || !email || !password || !department_id || !role) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Missing required fields: name, email, password, department_id, and role are required.",
+      });
+    }
+    if (!ALLOWED_ROLES.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid role. Allowed roles: ${ALLOWED_ROLES.join(", ")}`,
+      });
     }
 
-    if (!department_id) {
-      return res
-        .status(400)
-        .json({ message: "Department is required", success: false });
+    if (role === "hod" && !hod_department_id) {
+      return res.status(400).json({
+        success: false,
+        message: "HOD role requires hod_department_id field.",
+      });
     }
+    if (role == "student" && !usn) {
+      return res.status(400).json({
+        success: false,
+        message: "Student role requires usn field.",
+      });
+    }
+    if ((role == "faculty" || role == "hod") && !employee_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Faculty and HOD roles require employee_id field.",
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // here need to handle
-    //   for student usn number
-    // for faculty employee_id
+    if (role === "hod") {
+      const checkAlreadyDepartmentHavingHod =
+        await prisma.department.findUnique({
+          where: {
+            id: hod_department_id,
+          },
+        });
+      if (!checkAlreadyDepartmentHavingHod) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid hod_department_id",
+        });
+      }
+      if (checkAlreadyDepartmentHavingHod.hod_id) {
+        return res.status(400).json({
+          success: false,
+          message: "This department already has a HOD assigned",
+        });
+      }
 
-    const user = await prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
+      let user = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            name,
+            email,
+            password_hash: hashedPassword,
+            phone: phone || null,
+            department_id,
+            usn: usn || null,
+            employee_id: employee_id || null,
+            status: status || "active",
+            roles: {
+              create: {
+                role: role,
+              },
+            },
+          },
+        });
+        await tx.department.update({
+          where: { id: hod_department_id },
+          data: { hod_id: newUser.id },
+        });
+        return newUser;
+      });
+      const { password_hash, ...safeUser } = user;
+      return res.status(201).json({
+        user: safeUser,
+        success: true,
+        message: "HOD user created and assigned to department successfully.",
+      });
+    }
+
+    let [user] = await prisma.$transaction([
+      prisma.user.create({
         data: {
           name,
           email,
           password_hash: hashedPassword,
+          phone: phone || null,
           department_id,
+          usn: usn || null,
+          employee_id: employee_id || null,
+          status: status || "active",
+          roles: {
+            create: {
+              role: role,
+            },
+          },
         },
-      });
-
-      if (roles && roles?.length > 0) {
-        await tx.userRoles.createMany({
-          data: roles.map((role) => {
-            return {
-              user_id: newUser.id,
-              role,
-              granted_by: currentUserId ? currentUserId : newUser.id, // if no user is logged in, assume self-grant (e.g. during initial setup)
-            };
-          }),
-        });
-      }
-
-      return newUser;
-    });
-
-    if (!user) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to create user",
-      });
-    }
-
+      }),
+    ]);
+    let { password_hash, ...safeUser } = user;
     return res.status(201).json({
+      user: safeUser,
       success: true,
       message: "User created successfully",
-      data: user,
     });
   } catch (error) {
     console.log(error);

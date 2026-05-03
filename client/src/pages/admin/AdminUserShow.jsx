@@ -41,6 +41,7 @@ const INITIAL_FORM = {
   usn: "",
   employee_id: "",
   status: "active",
+  hod_department_id: "",
 };
 const ALL_TABS = [
   { id: "all", label: "All" },
@@ -318,7 +319,36 @@ const AdminUserShow = () => {
     });
   };
   const handleSubmit = () => {
+    if (form.role === "student") {
+      if (!form.usn) {
+        toast.error("Please enter USN");
+        return;
+      }
+    } else if (["faculty", "hod"].includes(form.role)) {
+      if (!form.employee_id) {
+        toast.error("Please enter Employee ID");
+        return;
+      }
+    } else if (form.role === "hod") {
+      if (!form.hod_department_id) {
+        toast.error("Please select department for HOD");
+        return;
+      }
+    }
+
+    if (
+      !form.name ||
+      !form.email ||
+      !form.password ||
+      !form.role ||
+      !form.department_id
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
     console.log(form);
+
     setOpen(false);
     setForm(INITIAL_FORM);
   };
