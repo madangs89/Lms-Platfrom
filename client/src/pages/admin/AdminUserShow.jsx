@@ -29,14 +29,7 @@ import { useSelector } from "react-redux";
 // ── Constants ─────────────────────────────────────────────────────────────────
 const LIMIT = 5;
 
-const DEPARTMENTS = [
-  { id: "dept-cs", name: "Computer Science" },
-  { id: "dept-ec", name: "Electronics & Communication" },
-  { id: "dept-me", name: "Mechanical Engineering" },
-  { id: "dept-ce", name: "Civil Engineering" },
-  { id: "dept-is", name: "Information Science" },
-];
-const ROLES = ["student", "lecturer", "hod", "admin"];
+const ROLES = ["student", "faculty", "hod", "admin"];
 const INITIAL_FORM = {
   name: "",
   email: "",
@@ -131,7 +124,6 @@ const AdminUserShow = () => {
   // Table state
   const [activeTab, setActiveTab] = useState("all");
   const [page, setPage] = useState(1);
-
 
   // Search
   const [search, setSearch] = useState("");
@@ -245,6 +237,32 @@ const AdminUserShow = () => {
     : (userQuery.data?.users ?? []);
   const isSearchMode = !!search.trim();
   const showSkeleton = loading || (isSearchMode && searching);
+
+  const getAllDepartments = async () => {
+    const { data } = await axios.get(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/active-departments`,
+      { withCredentials: true },
+    );
+
+    return data.departments || [];
+  };
+
+  const departmentQuery = useQuery({
+    queryKey: ["departments"],
+    queryFn: getAllDepartments,
+    retry: 3,
+    refetchOnWindowFocus: false,
+    onError: (err) => {
+      toast.error(
+        err?.response?.data?.message ||
+          err.message ||
+          "Failed to fetch departments",
+      );
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const DEPARTMENTS = departmentQuery?.data ?? [];
 
   const switchTab = (tab) => {
     setActiveTab(tab);

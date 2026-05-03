@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createDepartment,
+  getAllActiveDepartments,
   getCountOfActiveDepartments,
 } from "../controllers/department.controler.js";
 import { adminMiddleware } from "../middlewares/admin.middelwares.js";
@@ -20,6 +21,12 @@ departmentRouter.get(
   authMiddleware,
   adminMiddleware,
   getCountOfActiveDepartments,
+);
+departmentRouter.get(
+  "/active-departments",
+  authMiddleware,
+  adminMiddleware,
+  getAllActiveDepartments,
 );
 
 export default departmentRouter;

@@ -62,9 +62,12 @@ export const createDepartment = async (req, res) => {
   }
 };
 
-export const getAllDepartments = async (req, res) => {
+export const getAllActiveDepartments = async (req, res) => {
   try {
     const departments = await prisma.department.findMany({
+      where: {
+        is_active: true,
+      },
       orderBy: {
         name: "asc",
       },
