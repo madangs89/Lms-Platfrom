@@ -30,6 +30,6 @@ userRouter.get(
   adminMiddleware,
   getCountOfAllUserOnTheBasisOfRole,
 );
-userRouter.post("/create", authMiddleware, adminMiddleware, createUser);
+userRouter.post("/create-user", authMiddleware, adminMiddleware, createUser);
 
 export default userRouter;

@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
@@ -44,6 +45,7 @@ const AddUser = ({
   DEPARTMENTS,
   ROLES,
   handleSubmit,
+  mutationLoading,
 }) => {
   const isStudent = form.role === "student";
   const isLecturer = ["faculty", "hod"].includes(form.role);
@@ -72,7 +74,7 @@ const AddUser = ({
     if (availableHodDepartmentsQuery.error) {
       toast.error(
         availableHodDepartmentsQuery.error?.response?.data?.message ||
-          availableHodDepartmentsQuery.error.message ||
+          availableHodDepartmentsQuery?.error?.message ||
           "Failed to fetch available HOD departments",
       );
     }
@@ -81,7 +83,7 @@ const AddUser = ({
   useEffect(() => {
     if (
       !availableHodDepartmentsQuery.isLoading &&
-      availableHodDepartmentsQuery.data.length === 0
+      (availableHodDepartmentsQuery?.data?.length) === 0
     ) {
       toast.error(
         "No departments available for HOD role. Please create a department first.",
@@ -344,6 +346,7 @@ const AddUser = ({
               Cancel
             </Button>
             <Button
+              disabled={mutationLoading}
               onClick={handleSubmit}
               className="h-9 px-4 text-[13px] rounded-md"
               style={{
@@ -351,7 +354,7 @@ const AddUser = ({
                 color: colors.sidebarText,
               }}
             >
-              Create User
+              {mutationLoading ? <Spinner /> : "Create User"}
             </Button>
           </div>
         </DialogContent>

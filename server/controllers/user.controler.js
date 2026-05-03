@@ -87,6 +87,7 @@ export const createUser = async (req, res) => {
             roles: {
               create: {
                 role: role,
+                granted_by: req.user.id,
               },
             },
           },
@@ -119,6 +120,7 @@ export const createUser = async (req, res) => {
           roles: {
             create: {
               role: role,
+              granted_by: req.user.id,
             },
           },
         },

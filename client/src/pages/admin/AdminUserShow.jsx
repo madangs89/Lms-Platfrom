@@ -10,7 +10,7 @@ import {
 import AddUser from "@/mycomponents/admin/AddUser";
 import Header from "@/mycomponents/admin/Header";
 import MetricCard from "@/mycomponents/admin/MetricCard";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import {
   ChevronLeft,
@@ -123,6 +123,7 @@ const AdminUserShow = () => {
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
 
+  const queryClient = useQueryClient();
   // Table state
   const [activeTab, setActiveTab] = useState("all");
   const [page, setPage] = useState(1);
@@ -318,6 +319,35 @@ const AdminUserShow = () => {
       return next;
     });
   };
+
+  const createUser = async (form) => {
+    const { data } = await axios.post(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/create-user`,
+      form,
+      { withCredentials: true },
+    );
+
+    return data;
+  };
+
+  const createUserMutation = useMutation({
+    mutationFn: createUser,
+    onSuccess: (data) => {
+      toast.success(data?.message || "User created successfully");
+      queryClient.invalidateQueries(["users"]);
+      queryClient.invalidateQueries(["userCounts"]);
+      queryClient.invalidateQueries(["available-hod-departments"]);
+      queryClient.invalidateQueries(["departments-count"]);
+      setOpen(false);
+      setForm(INITIAL_FORM);
+    },
+    onError: (err) => {
+      toast.error(
+        err?.response?.data?.message || err.message || "Failed to create user",
+      );
+    },
+  });
+
   const handleSubmit = () => {
     if (form.role === "student") {
       if (!form.usn) {
@@ -346,11 +376,7 @@ const AdminUserShow = () => {
       toast.error("Please fill in all required fields");
       return;
     }
-
-    console.log(form);
-
-    setOpen(false);
-    setForm(INITIAL_FORM);
+    createUserMutation.mutate(form);
   };
   const handleClose = () => {
     setOpen(false);
@@ -727,6 +753,7 @@ const AdminUserShow = () => {
         DEPARTMENTS={DEPARTMENTS}
         ROLES={ROLES}
         handleSubmit={handleSubmit}
+        mutationLoading={createUserMutation.isPending}
       />
     </div>
   );
