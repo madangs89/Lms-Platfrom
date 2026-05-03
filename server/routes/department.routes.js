@@ -4,6 +4,7 @@ import {
   getAllActiveDepartments,
   getAllDepartmentsWithHodsAndStudentsCountAndBranchCount,
   getCountOfActiveDepartments,
+  getCountOfDepartmentsActiveAndInactiveAndTotalAndWithHods,
 } from "../controllers/department.controler.js";
 import { adminMiddleware } from "../middlewares/admin.middelwares.js";
 import { authMiddleware } from "../middlewares/auth.middelware.js";
@@ -34,6 +35,12 @@ departmentRouter.get(
   authMiddleware,
   adminMiddleware,
   getAllDepartmentsWithHodsAndStudentsCountAndBranchCount,
+);
+departmentRouter.get(
+  "/department-counts-total-active-inactive-with-hods",
+  authMiddleware,
+  adminMiddleware,
+  getCountOfDepartmentsActiveAndInactiveAndTotalAndWithHods,
 );
 
 export default departmentRouter;

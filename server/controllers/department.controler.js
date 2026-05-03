@@ -151,10 +151,53 @@ export const getAllDepartmentsWithHodsAndStudentsCountAndBranchCount = async (
     return res.status(200).json({
       result,
       success: true,
+      message: "Departments retrieved successfully",
     });
   } catch (error) {
     console.log(error);
 
+    return res
+      .status(500)
+      .json({ message: "Internal server error", success: false });
+  }
+};
+
+export const getCountOfDepartmentsActiveAndInactiveAndTotalAndWithHods = async (
+  req,
+  res,
+) => {
+  try {
+    const [activeCount, inactiveCount, totalCount, withHodCount] =
+      await prisma.$transaction([
+        prisma.department.count({
+          where: { is_active: true },
+        }),
+
+        prisma.department.count({
+          where: { is_active: false },
+        }),
+
+        prisma.department.count(),
+
+        prisma.department.count({
+          where: {
+            hod_id: {
+              not: null,
+            },
+          },
+        }),
+      ]);
+
+    return res.status(200).json({
+      activeCount,
+      inactiveCount,
+      totalCount,
+      withHodCount,
+      success: true,
+      message: "Department counts retrieved successfully",
+    });
+  } catch (error) {
+    console.log(error);
     return res
       .status(500)
       .json({ message: "Internal server error", success: false });

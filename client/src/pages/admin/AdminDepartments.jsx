@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import MetricCard from "@/mycomponents/admin/MetricCard";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 import {
   Building2,
   Landmark,
@@ -9,6 +11,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 
 const AdminDepartments = () => {
@@ -16,6 +19,32 @@ const AdminDepartments = () => {
   const colors = theme[theme.currentTheme];
 
   const [open, setOpen] = useState(false);
+
+  const fetchDepartmentsCountTotalActiveInactiveWithHods = async () => {
+    const { data } = await axios.get(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/department-counts-total-active-inactive-with-hods`,
+      {
+        withCredentials: true,
+      },
+    );
+    return data;
+  };
+
+  const departmentsCountQuery = useQuery({
+    queryKey: ["departments-count"],
+    queryFn: fetchDepartmentsCountTotalActiveInactiveWithHods,
+    refetchOnWindowFocus: false,
+
+    refetchOnReconnect: true,
+    retry: 3,
+    onError: (error) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to fetch department counts",
+      );
+    },
+  });
 
   return (
     <div className="w-full flex flex-col gap-4 overflow-scroll h-screen">
@@ -50,28 +79,28 @@ const AdminDepartments = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MetricCard
           title="Total Departments"
-          value="5"
+          value={departmentsCountQuery.data?.totalCount || "0"}
           Icon={Landmark}
-          loading={false}
+          loading={departmentsCountQuery.isLoading}
         />
         <MetricCard
           title="Active Departments"
-          value="5"
+          value={departmentsCountQuery.data?.activeCount || "0"}
           Icon={MonitorCheck}
-          loading={false}
+          loading={departmentsCountQuery.isLoading}
         />
         <MetricCard
           title="Inactive Departments"
-          value="5"
+          value={departmentsCountQuery.data?.inactiveCount || "0"}
           Icon={ShieldBan}
-          loading={false}
+          loading={departmentsCountQuery.isLoading}
           isRed={true}
         />
         <MetricCard
           title="Departments With Hods"
-          value="5"
+          value={departmentsCountQuery.data?.withHodCount || "0"}
           Icon={UsersRound}
-          loading={false}
+          loading={departmentsCountQuery.isLoading}
         />
       </div>
     </div>
