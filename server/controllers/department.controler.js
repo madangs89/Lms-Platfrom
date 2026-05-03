@@ -85,6 +85,82 @@ export const getAllActiveDepartments = async (req, res) => {
   }
 };
 
+export const getAllDepartmentsWithHodsAndStudentsCountAndBranchCount = async (
+  req,
+  res,
+) => {
+  try {
+    const { is_active = true, page = 1, limit = 10 } = req.params;
+
+    const skip = (page - 1) * limit;
+
+    let [departments, studentCounts] = await prisma.$transaction([
+      // 1. Departments + HOD + branch count
+      prisma.department.findMany({
+        where: { is_active: Boolean(is_active) },
+        skip,
+        take: Number(limit),
+        orderBy: { name: "asc" },
+        select: {
+          id: true,
+          name: true,
+
+          hod: {
+            select: {
+              name: true,
+              id: true,
+            },
+          },
+
+          _count: {
+            select: {
+              branches: true,
+            },
+          },
+        },
+      }),
+
+      // 2. Student count per department
+      prisma.user.groupBy({
+        by: ["department_id"],
+        where: {
+          roles: {
+            some: {
+              role: "student",
+            },
+          },
+        },
+        _count: {
+          _all: true,
+        },
+      }),
+    ]);
+
+    let studentCountMap = Object.fromEntries(
+      studentCounts.map((item) => [item.department_id, item._count._all]),
+    );
+
+    const result = departments.map((dept) => ({
+      id: dept.id,
+      name: dept.name,
+      hod: { name: dept.hod?.name, id: dept.hod?.id } || null,
+      branchCount: dept._count.branches,
+      studentCount: studentCountMap[dept.id] || 0,
+    }));
+
+    return res.status(200).json({
+      result,
+      success: true,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res
+      .status(500)
+      .json({ message: "Internal server error", success: false });
+  }
+};
+
 export const getCountOfActiveDepartments = async (req, res) => {
   try {
     // need to handle caching here

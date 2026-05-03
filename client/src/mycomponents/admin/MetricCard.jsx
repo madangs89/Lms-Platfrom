@@ -13,7 +13,13 @@ if (typeof document !== "undefined") {
   }
 }
 
-const MetricCard = ({ title = "Users", value = "1,234", Icon, loading = false }) => {
+const MetricCard = ({
+  title = "Users",
+  value = "1,234",
+  Icon,
+  loading = false,
+  isRed = false,
+}) => {
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
   const isDark = theme.currentTheme === "dark";
@@ -42,9 +48,13 @@ const MetricCard = ({ title = "Users", value = "1,234", Icon, loading = false })
           gap: 14,
         }}
       >
-        <div style={{ ...skeletonBase, width: 40, height: 40, borderRadius: 11 }} />
+        <div
+          style={{ ...skeletonBase, width: 40, height: 40, borderRadius: 11 }}
+        />
         <div>
-          <div style={{ ...skeletonBase, width: 80, height: 12, marginBottom: 10 }} />
+          <div
+            style={{ ...skeletonBase, width: 80, height: 12, marginBottom: 10 }}
+          />
           <div style={{ ...skeletonBase, width: 56, height: 26 }} />
         </div>
       </div>
@@ -64,7 +74,9 @@ const MetricCard = ({ title = "Users", value = "1,234", Icon, loading = false })
         transition: "transform 0.15s ease",
         cursor: "pointer",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.transform = "translateY(-2px)")
+      }
       onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
     >
       <div
@@ -72,14 +84,14 @@ const MetricCard = ({ title = "Users", value = "1,234", Icon, loading = false })
           width: 40,
           height: 40,
           borderRadius: 11,
-          background: colors.sidebarClr,
+          background:  isRed ? "#fae9e9" : colors.sidebarClr,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
         }}
       >
-        {Icon && <Icon size={18} color={colors.sidebarText} />}
+        {Icon && <Icon size={18} color={isRed ? "red" : colors.sidebarText} />}
       </div>
 
       <div>

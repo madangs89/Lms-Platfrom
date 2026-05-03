@@ -2,6 +2,7 @@ import express from "express";
 import {
   createDepartment,
   getAllActiveDepartments,
+  getAllDepartmentsWithHodsAndStudentsCountAndBranchCount,
   getCountOfActiveDepartments,
 } from "../controllers/department.controler.js";
 import { adminMiddleware } from "../middlewares/admin.middelwares.js";
@@ -27,6 +28,12 @@ departmentRouter.get(
   authMiddleware,
   adminMiddleware,
   getAllActiveDepartments,
+);
+departmentRouter.get(
+  "/active-departments-hods-students-branches/:is_active/:page/:limit",
+  authMiddleware,
+  adminMiddleware,
+  getAllDepartmentsWithHodsAndStudentsCountAndBranchCount,
 );
 
 export default departmentRouter;
