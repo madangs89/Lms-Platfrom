@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Header from "@/mycomponents/admin/Header";
 import MetricCard from "@/mycomponents/admin/MetricCard";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
@@ -49,31 +50,14 @@ const AdminDepartments = () => {
   return (
     <div className="w-full flex flex-col gap-4 overflow-scroll h-screen">
       {/* ── Header ── */}
-      <div className="flex w-full justify-between items-center mt-3">
-        <div className="flex flex-col gap-0.5">
-          <h1
-            className="text-xl sm:text-2xl font-semibold"
-            style={{ color: colors.textPrimary }}
-          >
-            Departments
-          </h1>
-          <p
-            className="text-[12px] sm:text-[13px]"
-            style={{ color: colors.textSecondary }}
-          >
-            Dashboard &gt; Departments
-          </p>
-        </div>
-        <Button
-          onClick={() => setOpen(true)}
-          className="flex items-center gap-1 px-3 h-9 text-[13px] rounded-md flex-shrink-0"
-          style={{ background: colors.primaryHover, color: colors.sidebarText }}
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add Department</span>
-          <span className="sm:hidden">Add</span>
-        </Button>
-      </div>
+
+      <Header
+        colors={colors}
+        title="Departments"
+        bigScreenButtonText="Add Department"
+        smallScreenButtonText="Add"
+        onClick={() => setOpen(true)}
+      />
 
       {/* ── Metric Cards — always 4 in a row, shrink on small ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

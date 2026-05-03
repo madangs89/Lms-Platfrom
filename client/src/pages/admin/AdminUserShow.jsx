@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import AddUser from "@/mycomponents/admin/AddUser";
+import Header from "@/mycomponents/admin/Header";
 import MetricCard from "@/mycomponents/admin/MetricCard";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
@@ -157,7 +158,12 @@ const AdminUserShow = () => {
           { withCredentials: true },
         );
         if (data.success) setSearchResults(data.users ?? []);
-      } catch {
+      } catch (error) {
+        toast.error(
+          error?.response?.data?.message ||
+            error.message ||
+            "Failed to fetch search results",
+        );
         setSearchResults([]);
       } finally {
         setSearching(false);
@@ -184,7 +190,6 @@ const AdminUserShow = () => {
   const userQuery = useQuery({
     queryKey: ["users", activeTab, page],
     queryFn: () => fetchAllUsersOnRole({ activeTab, page }),
-    keepPreviousData: true,
     staleTime: 2 * 60 * 1000,
     onError: (err) => {
       toast.error(
@@ -199,6 +204,17 @@ const AdminUserShow = () => {
 
   let loading = userQuery.isLoading;
   const total = userQuery?.data?.total || 0;
+
+  useEffect(() => {
+    if (userQuery.error) {
+      toast.error(
+        userQuery.error?.response?.data?.message ||
+          userQuery.error.message ||
+          "Failed to fetch users",
+      );
+    }
+  }, [userQuery.error]);
+
   const fetchAllUserCountsPerRole = async () => {
     const data = await axios.get(
       `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/get-role-user-count`,
@@ -232,6 +248,16 @@ const AdminUserShow = () => {
         admin: 0,
       };
 
+  useEffect(() => {
+    if (countQuery.error) {
+      toast.error(
+        countQuery.error?.response?.data?.message ||
+          countQuery.error.message ||
+          "Failed to fetch user counts",
+      );
+    }
+  }, [countQuery.error]);
+
   const displayRows = search.trim()
     ? (searchResults ?? [])
     : (userQuery.data?.users ?? []);
@@ -263,6 +289,16 @@ const AdminUserShow = () => {
   });
 
   const DEPARTMENTS = departmentQuery?.data ?? [];
+
+  useEffect(() => {
+    if (departmentQuery.error) {
+      toast.error(
+        departmentQuery.error?.response?.data?.message ||
+          departmentQuery.error.message ||
+          "Failed to fetch departments",
+      );
+    }
+  }, [departmentQuery.error]);
 
   const switchTab = (tab) => {
     setActiveTab(tab);
@@ -306,32 +342,13 @@ const AdminUserShow = () => {
 
   return (
     <div className="w-full flex flex-col gap-4 overflow-scroll h-screen">
-      {/* ── Header ── */}
-      <div className="flex w-full justify-between items-center mt-3">
-        <div className="flex flex-col gap-0.5">
-          <h1
-            className="text-xl sm:text-2xl font-semibold"
-            style={{ color: colors.textPrimary }}
-          >
-            Users
-          </h1>
-          <p
-            className="text-[12px] sm:text-[13px]"
-            style={{ color: colors.textSecondary }}
-          >
-            Dashboard &gt; Users
-          </p>
-        </div>
-        <Button
-          onClick={() => setOpen(true)}
-          className="flex items-center gap-1 px-3 h-9 text-[13px] rounded-md flex-shrink-0"
-          style={{ background: colors.primaryHover, color: colors.sidebarText }}
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add User</span>
-          <span className="sm:hidden">Add</span>
-        </Button>
-      </div>
+      <Header
+        colors={colors}
+        title="Users"
+        bigScreenButtonText="Add User"
+        smallScreenButtonText="Add"
+        onClick={() => setOpen(true)}
+      />
 
       {/* ── Metric Cards — always 4 in a row, shrink on small ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
