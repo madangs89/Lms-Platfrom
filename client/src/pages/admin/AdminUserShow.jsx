@@ -22,7 +22,7 @@ import {
   UserRoundPen,
   UserStar,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 
@@ -130,13 +130,8 @@ const AdminUserShow = () => {
 
   // Table state
   const [activeTab, setActiveTab] = useState("all");
-  const [users, setUsers] = useState([]);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
 
-  const [departments, setdepartments] = useState([]);
 
   // Search
   const [search, setSearch] = useState("");
@@ -156,31 +151,6 @@ const AdminUserShow = () => {
     return () => window.removeEventListener("resize", handler);
   }, []);
 
-  // ── Fetch ─────────────────────────────────────────────────────────────────
-  const fetchUsers = useCallback(async (tab, pg) => {
-    setLoading(true);
-    try {
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/all/${pg}/${LIMIT}/${tab}`,
-        { withCredentials: true },
-      );
-      if (data.success) {
-        setUsers(data.users);
-        setTotal(data.total);
-        setTotalPages(Math.ceil(data.total / LIMIT));
-      }
-    } catch (err) {
-      console.error("Error fetching users:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!search) fetchUsers(activeTab, page);
-  }, [activeTab, page, fetchUsers, search]);
-
-  // ── Search debounce ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!search.trim()) {
       setSearchResults(null);
@@ -204,7 +174,39 @@ const AdminUserShow = () => {
     return () => clearTimeout(searchTimeout.current);
   }, [search]);
 
+  const fetchAllUsersOnRole = async (payload) => {
+    const { activeTab, page } = payload;
 
+    const { data } = await axios.get(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/all/${page}/${LIMIT}/${activeTab}`,
+      { withCredentials: true },
+    );
+
+    return {
+      users: data?.users || [],
+      total: data?.total || 0,
+      totalPages: Math.ceil((data?.total || 0) / LIMIT),
+    };
+  };
+
+  const userQuery = useQuery({
+    queryKey: ["users", activeTab, page],
+    queryFn: () => fetchAllUsersOnRole({ activeTab, page }),
+    keepPreviousData: true,
+    staleTime: 2 * 60 * 1000,
+    onError: (err) => {
+      toast.error(
+        err?.response?.data?.message || err.message || "Failed to fetch users",
+      );
+    },
+    refetchOnWindowFocus: false,
+    retry: 5,
+    retryDelay: 1000,
+    enabled: !search.trim(),
+  });
+
+  let loading = userQuery.isLoading;
+  const total = userQuery?.data?.total || 0;
   const fetchAllUserCountsPerRole = async () => {
     const data = await axios.get(
       `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/get-role-user-count`,
@@ -238,7 +240,9 @@ const AdminUserShow = () => {
         admin: 0,
       };
 
-  const displayRows = search.trim() ? (searchResults ?? []) : users;
+  const displayRows = search.trim()
+    ? (searchResults ?? [])
+    : (userQuery.data?.users ?? []);
   const isSearchMode = !!search.trim();
   const showSkeleton = loading || (isSearchMode && searching);
 
@@ -249,7 +253,6 @@ const AdminUserShow = () => {
     setSearchResults(null);
   };
 
-  // ── Form ──────────────────────────────────────────────────────────────────
   const handleChange = (field, value) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value };
@@ -270,7 +273,7 @@ const AdminUserShow = () => {
     setForm(INITIAL_FORM);
   };
 
-  const pages = getPageNumbers(page, totalPages);
+  const pages = getPageNumbers(page, userQuery?.data?.totalPages || 1);
 
   const desktopCols = [
     "User",
@@ -583,7 +586,7 @@ const AdminUserShow = () => {
               className="text-[11px] sm:text-[12px]"
               style={{ color: colors.textSecondary }}
             >
-              {total === 0
+              {(userQuery?.data?.total || 0) === 0
                 ? "No results"
                 : `Showing ${(page - 1) * LIMIT + 1}–${Math.min(page * LIMIT, total)} of ${total}`}
             </p>
@@ -620,8 +623,12 @@ const AdminUserShow = () => {
               )}
 
               <PageBtn
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages || loading}
+                onClick={() =>
+                  setPage((p) =>
+                    Math.min(userQuery?.data?.totalPages || 1, p + 1),
+                  )
+                }
+                disabled={page === userQuery?.data?.totalPages || loading}
                 colors={colors}
               >
                 <ChevronRight className="w-3.5 h-3.5" />
