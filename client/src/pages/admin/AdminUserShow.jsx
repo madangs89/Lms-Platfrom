@@ -1,20 +1,5 @@
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -22,7 +7,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import AddUser from "@/mycomponents/admin/AddUser";
 import MetricCard from "@/mycomponents/admin/MetricCard";
+import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import {
   ChevronLeft,
@@ -35,7 +22,7 @@ import {
   UserRoundPen,
   UserStar,
 } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 
@@ -64,7 +51,7 @@ const INITIAL_FORM = {
 const ALL_TABS = [
   { id: "all", label: "All" },
   { id: "student", label: "Students" },
-  { id: "lecturer", label: "Lecturers" },
+  { id: "faculty", label: "Lecturers" },
   { id: "hod", label: "HODs" },
   { id: "admin", label: "Admins" },
 ];
@@ -130,19 +117,6 @@ const PageBtn = ({ children, onClick, active, disabled, colors }) => (
   </button>
 );
 
-const Field = ({ label, required, children, colors }) => (
-  <div className="flex flex-col gap-1.5">
-    <Label
-      className="text-[12px] font-medium"
-      style={{ color: colors.textSecondary }}
-    >
-      {label}
-      {required && <span className="ml-0.5 text-red-400">*</span>}
-    </Label>
-    {children}
-  </div>
-);
-
 const inputStyle = (colors) => ({
   background: colors.inputBg,
   borderColor: colors.inputBorder,
@@ -162,14 +136,7 @@ const AdminUserShow = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const [countLoading, setCountLoading] = useState(false);
-
-  const [roleCounts, setRoleCounts] = useState({
-    student: 0,
-    faculty: 0,
-    hod: 0,
-    admin: 0,
-  });
+  const [departments, setdepartments] = useState([]);
 
   // Search
   const [search, setSearch] = useState("");
@@ -237,27 +204,39 @@ const AdminUserShow = () => {
     return () => clearTimeout(searchTimeout.current);
   }, [search]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setCountLoading(true);
-        const data = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/get-role-user-count`,
-          { withCredentials: true },
-        );
-        if (data.data.success) {
-          setCountLoading(false);
-          setRoleCounts(data.data.counts);
-        }
-      } catch (error) {
-        console.log(error);
 
-        toast.error("Failed to fetch user counts");
-      } finally {
-        setCountLoading(false);
-      }
-    })();
-  }, []);
+  const fetchAllUserCountsPerRole = async () => {
+    const data = await axios.get(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/get-role-user-count`,
+      { withCredentials: true },
+    );
+
+    console.log("tanks");
+
+    return data.data;
+  };
+
+  const countQuery = useQuery({
+    queryKey: ["userCounts"],
+    queryFn: fetchAllUserCountsPerRole,
+    retry: false,
+    refetchOnWindowFocus: false,
+    onError: (err) => {
+      toast.error(
+        err?.response?.data?.message ||
+          err.message ||
+          "Failed to fetch user counts",
+      );
+    },
+  });
+  let roleCounts = countQuery?.data
+    ? countQuery.data.counts
+    : {
+        student: 0,
+        faculty: 0,
+        hod: 0,
+        admin: 0,
+      };
 
   const displayRows = search.trim() ? (searchResults ?? []) : users;
   const isSearchMode = !!search.trim();
@@ -290,13 +269,9 @@ const AdminUserShow = () => {
     setOpen(false);
     setForm(INITIAL_FORM);
   };
-  const isStudent = form.role === "student";
-  const isLecturer = ["lecturer", "hod"].includes(form.role);
+
   const pages = getPageNumbers(page, totalPages);
 
-  // Columns shown at each breakpoint
-  // mobile: User + Role + Status
-  // desktop: all 6
   const desktopCols = [
     "User",
     "Role",
@@ -343,25 +318,25 @@ const AdminUserShow = () => {
           title="Students"
           value={roleCounts.student}
           Icon={GraduationCap}
-          loading={countLoading}
+          loading={countQuery.isLoading}
         />
         <MetricCard
           title="Faculties"
           value={roleCounts.faculty}
           Icon={UserRoundPen}
-          loading={countLoading}
+          loading={countQuery.isLoading}
         />
         <MetricCard
           title="HODs"
           value={roleCounts.hod}
           Icon={UserStar}
-          loading={countLoading}
+          loading={countQuery.isLoading}
         />
         <MetricCard
           title="Admins"
           value={roleCounts.admin}
           Icon={ShieldUser}
-          loading={countLoading}
+          loading={countQuery.isLoading}
         />
       </div>
 
@@ -669,227 +644,18 @@ const AdminUserShow = () => {
         )}
       </div>
 
-      {/* ── Add User Modal ── */}
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent
-          className="w-[95vw] sm:max-w-[520px] p-0 overflow-hidden border"
-          style={{
-            background: colors.card,
-            borderColor: colors.border,
-            color: colors.textPrimary,
-          }}
-        >
-          <DialogHeader
-            className="px-4 sm:px-6 py-4 border-b"
-            style={{ borderColor: colors.divider }}
-          >
-            <DialogTitle
-              className="text-[16px] sm:text-[17px] font-semibold"
-              style={{ color: colors.textPrimary }}
-            >
-              Add New User
-            </DialogTitle>
-            <p
-              className="text-[12px] sm:text-[13px] mt-0.5"
-              style={{ color: colors.textSecondary }}
-            >
-              Fill in the details to create a new user account.
-            </p>
-          </DialogHeader>
-
-          <div className="px-4 sm:px-6 py-4 flex flex-col gap-3 sm:gap-4 max-h-[70vh] overflow-y-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <Field label="Full Name" required colors={colors}>
-                <Input
-                  placeholder="John Doe"
-                  value={form.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  style={inputStyle(colors)}
-                  className="h-9 text-[13px] border rounded-md"
-                />
-              </Field>
-              <Field label="Email" required colors={colors}>
-                <Input
-                  type="email"
-                  placeholder="john@college.edu"
-                  value={form.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  style={inputStyle(colors)}
-                  className="h-9 text-[13px] border rounded-md"
-                />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <Field label="Password" required colors={colors}>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={(e) => handleChange("password", e.target.value)}
-                  style={inputStyle(colors)}
-                  className="h-9 text-[13px] border rounded-md"
-                />
-              </Field>
-              <Field label="Phone" colors={colors}>
-                <Input
-                  placeholder="+91 9876543210"
-                  value={form.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
-                  style={inputStyle(colors)}
-                  className="h-9 text-[13px] border rounded-md"
-                />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <Field label="Department" required colors={colors}>
-                <Select
-                  value={form.department_id}
-                  onValueChange={(v) => handleChange("department_id", v)}
-                >
-                  <SelectTrigger
-                    className="h-9 text-[13px] border rounded-md"
-                    style={inputStyle(colors)}
-                  >
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent
-                    style={{
-                      background: colors.card,
-                      border: `1px solid ${colors.border}`,
-                      color: colors.textPrimary,
-                    }}
-                  >
-                    {DEPARTMENTS.map((d) => (
-                      <SelectItem
-                        key={d.id}
-                        value={d.id}
-                        className="text-[13px]"
-                      >
-                        {d.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              <Field label="Role" required colors={colors}>
-                <Select
-                  value={form.role}
-                  onValueChange={(v) => handleChange("role", v)}
-                >
-                  <SelectTrigger
-                    className="h-9 text-[13px] border rounded-md capitalize"
-                    style={inputStyle(colors)}
-                  >
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent
-                    style={{
-                      background: colors.card,
-                      border: `1px solid ${colors.border}`,
-                      color: colors.textPrimary,
-                    }}
-                  >
-                    {ROLES.map((r) => (
-                      <SelectItem
-                        key={r}
-                        value={r}
-                        className="text-[13px] capitalize"
-                      >
-                        {r.charAt(0).toUpperCase() + r.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-
-            {isStudent && (
-              <Field label="USN" required colors={colors}>
-                <Input
-                  placeholder="1XX21CS001"
-                  value={form.usn}
-                  onChange={(e) => handleChange("usn", e.target.value)}
-                  style={inputStyle(colors)}
-                  className="h-9 text-[13px] border rounded-md"
-                />
-              </Field>
-            )}
-            {isLecturer && (
-              <Field label="Employee ID" required colors={colors}>
-                <Input
-                  placeholder="EMP-2024-001"
-                  value={form.employee_id}
-                  onChange={(e) => handleChange("employee_id", e.target.value)}
-                  style={inputStyle(colors)}
-                  className="h-9 text-[13px] border rounded-md"
-                />
-              </Field>
-            )}
-
-            <Field label="Status" colors={colors}>
-              <Select
-                value={form.status}
-                onValueChange={(v) => handleChange("status", v)}
-              >
-                <SelectTrigger
-                  className="h-9 text-[13px] border rounded-md"
-                  style={inputStyle(colors)}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent
-                  style={{
-                    background: colors.card,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.textPrimary,
-                  }}
-                >
-                  {["active", "inactive", "suspended"].map((s) => (
-                    <SelectItem
-                      key={s}
-                      value={s}
-                      className="text-[13px] capitalize"
-                    >
-                      {s.charAt(0).toUpperCase() + s.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-
-          <div
-            className="flex justify-end gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t"
-            style={{ borderColor: colors.divider }}
-          >
-            <Button
-              variant="ghost"
-              onClick={handleClose}
-              className="h-9 px-4 text-[13px] rounded-md border"
-              style={{
-                borderColor: colors.border,
-                color: colors.textSecondary,
-                background: "transparent",
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              className="h-9 px-4 text-[13px] rounded-md"
-              style={{
-                background: colors.primaryHover,
-                color: colors.sidebarText,
-              }}
-            >
-              Create User
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Add User Modal */}
+      <AddUser
+        open={open}
+        handleClose={handleClose}
+        colors={colors}
+        handleChange={handleChange}
+        inputStyle={inputStyle}
+        form={form}
+        DEPARTMENTS={DEPARTMENTS}
+        ROLES={ROLES}
+        handleSubmit={handleSubmit}
+      />
     </div>
   );
 };
