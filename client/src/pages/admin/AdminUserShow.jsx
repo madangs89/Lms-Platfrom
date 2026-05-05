@@ -127,9 +127,6 @@ const AdminUserShow = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [page, setPage] = useState(1);
 
-  // Search
-  // const [search, setSearch] = useState("");
-
   const [debounceSearch, setDebounceSearch] = useState("");
 
   // Modal
@@ -171,6 +168,16 @@ const AdminUserShow = () => {
 
   const searchResults = searchQuery.data ?? [];
   const searching = searchQuery.isLoading;
+
+  useEffect(() => {
+    if (searchQuery.error) {
+      toast.error(
+        searchQuery.error?.response?.data?.message ||
+          searchQuery.error.message ||
+          "Failed to fetch users",
+      );
+    }
+  }, [searchQuery.error]);
 
   const fetchAllUsersOnRole = async (payload) => {
     const { activeTab, page } = payload;
