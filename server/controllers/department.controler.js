@@ -102,11 +102,11 @@ export const getAllDepartmentsWithHodsAndStudentsCountAndBranchCount = async (
       whereCondition.is_active = false;
     }
 
-    let [departments, studentCounts] = await prisma.$transaction([
+    let [departments, studentCounts, total] = await prisma.$transaction([
       // 1. Departments + HOD + branch count
       prisma.department.findMany({
         where: whereCondition,
-        skip,
+        skip: Number(skip),
         take: Number(limit),
         orderBy: { name: "asc" },
         select: {
@@ -151,6 +151,11 @@ export const getAllDepartmentsWithHodsAndStudentsCountAndBranchCount = async (
           _all: true,
         },
       }),
+
+      // 3. Total count for pagination
+      prisma.department.count({
+        where: whereCondition,
+      }),
     ]);
 
     let studentCountMap = Object.fromEntries(
@@ -176,6 +181,8 @@ export const getAllDepartmentsWithHodsAndStudentsCountAndBranchCount = async (
 
     return res.status(200).json({
       result,
+      total:Number(total),
+      totalPages: Math.ceil(Number(total) / Number(limit)),
       success: true,
       message: "Departments retrieved successfully",
     });

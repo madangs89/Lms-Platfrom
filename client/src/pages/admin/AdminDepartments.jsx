@@ -20,6 +20,15 @@ import { useSelector } from "react-redux";
 import StatusCellTemplate from "@/mycomponents/shared/StatusCellTemplate";
 import UserCellTemplate from "@/mycomponents/shared/UserCellTemplate";
 import SearchBar from "@/mycomponents/admin/SearchBar";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const template = {
   hod: {
@@ -238,7 +247,28 @@ const AdminDepartments = () => {
         className="rounded-lg border w-full h-full "
         style={{ borderColor: colors.border, background: colors.card }}
       >
-        <SearchBar />
+        <div className="w-full py-2 flex justify-between items-center flex-col md:flex-row gap-2 px-3">
+          <SearchBar />
+
+          <Select
+            onValueChange={(value) => {
+              setActiveFilter(value);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full max-w-48">
+              <SelectValue placeholder="Select Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Status</SelectLabel>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
 
         <TableTemplate
           colors={colors}

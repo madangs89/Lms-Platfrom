@@ -247,6 +247,7 @@ export const getAllUsersWthPagination = async (req, res) => {
       return res.status(200).json({
         users,
         total,
+        totalPages: Math.ceil(total / limit),
         success: true,
         message: "Users retrieved successfully",
       });
@@ -299,6 +300,7 @@ export const getAllUsersWthPagination = async (req, res) => {
       return res.status(200).json({
         users,
         total,
+        totalPages: Math.ceil(total / limit),
         success: true,
         message: "Users retrieved successfully",
       });

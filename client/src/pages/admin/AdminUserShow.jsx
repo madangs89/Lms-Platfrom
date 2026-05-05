@@ -1,11 +1,4 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { TableCell } from "@/components/ui/table";
 import AddUser from "@/mycomponents/admin/AddUser";
 import Header from "@/mycomponents/admin/Header";
 import MetricCard from "@/mycomponents/admin/MetricCard";
@@ -13,10 +6,7 @@ import SearchBar from "@/mycomponents/admin/SearchBar";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import {
-  ChevronLeft,
-  ChevronRight,
   GraduationCap,
-  Pencil,
   ShieldUser,
   UserRoundPen,
   UserStar,
@@ -24,12 +14,13 @@ import {
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
-import SkeletonRow from "../../mycomponents/shared/SkeletonRow";
+
 import TableTemplate from "@/mycomponents/admin/TableTemplate";
 import UserCellTemplate from "@/mycomponents/shared/UserCellTemplate";
 import TableCellTemplate from "@/mycomponents/shared/TableCellTemplate";
 import RoleCellTemplate from "@/mycomponents/shared/RolecellTemplate";
 import StatusCellTemplate from "@/mycomponents/shared/StatusCellTemplate";
+import PaginationHandler from "@/mycomponents/shared/PaginationHandler";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const LIMIT = 5;
@@ -54,34 +45,6 @@ const ALL_TABS = [
   { id: "hod", label: "HODs" },
   { id: "admin", label: "Admins" },
 ];
-
-const getPageNumbers = (current, total) => {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
-  if (current >= total - 3)
-    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
-  return [1, "...", current - 1, current, current + 1, "...", total];
-};
-
-const PageBtn = ({ children, onClick, active, disabled, colors }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className="w-7 h-7 rounded flex items-center justify-center text-[12px] font-medium transition-colors"
-    style={{
-      background: active ? colors.primary : "transparent",
-      color: active
-        ? "#fff"
-        : disabled
-          ? colors.textMuted
-          : colors.textSecondary,
-      cursor: disabled ? "not-allowed" : "pointer",
-      border: `1px solid ${active ? colors.primary : colors.border}`,
-    }}
-  >
-    {children}
-  </button>
-);
 
 const inputStyle = (colors) => ({
   background: colors.inputBg,
@@ -404,8 +367,6 @@ const AdminUserShow = () => {
     setForm(INITIAL_FORM);
   };
 
-  const pages = getPageNumbers(page, userQuery?.data?.totalPages || 1);
-
   const userColumns = [
     { key: "user", label: "User" },
     { key: "role", label: "Role" },
@@ -501,80 +462,17 @@ const AdminUserShow = () => {
           isLoading={loading || (isSearchMode && searching)}
           template={userTemplate}
         />
-
-        {/* Pagination */}
-        {!isSearchMode && (
-          <div
-            className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-3 sm:px-4 py-3 border-t gap-2"
-            style={{ borderColor: colors.border }}
-          >
-            <p
-              className="text-[11px] sm:text-[12px]"
-              style={{ color: colors.textSecondary }}
-            >
-              {(userQuery?.data?.total || 0) === 0
-                ? "No results"
-                : `Showing ${(page - 1) * LIMIT + 1}–${Math.min(page * LIMIT, total)} of ${total}`}
-            </p>
-
-            <div className="flex items-center gap-1 flex-wrap">
-              <PageBtn
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1 || loading}
-                colors={colors}
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </PageBtn>
-
-              {pages.map((p, i) =>
-                p === "..." ? (
-                  <span
-                    key={`d-${i}`}
-                    className="w-6 text-center text-[12px]"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    …
-                  </span>
-                ) : (
-                  <PageBtn
-                    key={p}
-                    onClick={() => setPage(p)}
-                    active={page === p}
-                    disabled={loading}
-                    colors={colors}
-                  >
-                    {p}
-                  </PageBtn>
-                ),
-              )}
-
-              <PageBtn
-                onClick={() =>
-                  setPage((p) =>
-                    Math.min(userQuery?.data?.totalPages || 1, p + 1),
-                  )
-                }
-                disabled={page === userQuery?.data?.totalPages || loading}
-                colors={colors}
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </PageBtn>
-            </div>
-          </div>
-        )}
-
-        {/* Search footer */}
-        {isSearchMode && !searching && searchResults !== null && (
-          <div
-            className="px-3 sm:px-4 py-2.5 border-t"
-            style={{ borderColor: colors.border }}
-          >
-            <p className="text-[12px]" style={{ color: colors.textSecondary }}>
-              {searchResults.length} result
-              {searchResults.length !== 1 ? "s" : ""} for "{debounceSearch}"
-            </p>
-          </div>
-        )}
+        <PaginationHandler
+          page={page}
+          setPage={setPage}
+          isSearchMode={isSearchMode}
+          searching={searching}
+          searchResults={searchResults}
+          loading={loading}
+          total={userQuery?.data?.total || 0}
+          debounceSearch={debounceSearch}
+          totalPages={userQuery?.data?.totalPages || 1}
+        />
       </div>
 
       {/* Add User Modal */}
