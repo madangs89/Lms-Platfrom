@@ -31,7 +31,7 @@ const SearchBar = ({
         clearTimeout(searchTimeout.current);
       }
     };
-  }, [search]);
+  }, [search, setDebounceSearch]);
 
   return (
     <div

@@ -27,7 +27,7 @@ const TableTemplate = ({
           <TableRow style={{ borderBottom: `1px solid ${colors.border}` }}>
             {columns.map((h) => (
               <TableHead
-                key={h}
+                key={h.key}
                 className="text-[11px] sm:text-[12px] font-medium whitespace-nowrap px-3 sm:px-4"
                 style={{ color: colors.textSecondary }}
               >
@@ -50,7 +50,7 @@ const TableTemplate = ({
                 className="text-center py-10 text-[13px]"
                 style={{ color: colors.textMuted }}
               >
-                No users found.
+                No Data found.
               </TableCell>
             </TableRow>
           )}
@@ -66,10 +66,10 @@ const TableTemplate = ({
                     const config = template[col.key];
                     if (!config) return null;
 
-                    const data = config.getter(row);
+                    const cellData = config.getter(row);
                     return (
                       <React.Fragment key={col.key}>
-                        {config.renderer(data)}
+                        {config.renderer(cellData)}
                       </React.Fragment>
                     );
                   })}
