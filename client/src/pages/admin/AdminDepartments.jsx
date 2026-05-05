@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import PaginationHandler from "@/mycomponents/shared/PaginationHandler";
+import DepartmentModal from "@/mycomponents/admin/modals/DepartmentModal";
 
 const template = {
   hod: {
@@ -330,6 +331,9 @@ const AdminDepartments = () => {
           searchResults={searchQuery.data}
           debounceSearch={debounceSearch}
         />
+
+        {/* Modal */}
+        <DepartmentModal open={true} onClose={setOpen} />
       </div>
     </div>
   );
