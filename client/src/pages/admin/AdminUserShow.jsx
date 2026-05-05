@@ -24,6 +24,7 @@ import {
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
+import SkeletonRow from "../../mycomponents/shared/SkeletonRow";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const LIMIT = 5;
@@ -73,23 +74,6 @@ const getPageNumbers = (current, total) => {
     return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
   return [1, "...", current - 1, current, current + 1, "...", total];
 };
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-const SkeletonRow = ({ colors, cols }) => (
-  <TableRow>
-    {Array.from({ length: cols }).map((_, i) => (
-      <TableCell key={i}>
-        <div
-          className="h-4 rounded animate-pulse"
-          style={{
-            background: colors.border,
-            width: i === 0 ? "120px" : "70px",
-          }}
-        />
-      </TableCell>
-    ))}
-  </TableRow>
-);
 
 const PageBtn = ({ children, onClick, active, disabled, colors }) => (
   <button
@@ -480,7 +464,7 @@ const AdminUserShow = () => {
 
         {/* Table */}
         <div className="overflow-auto w-full ">
-          <Table className="w-full">
+          <Table className="w-full h-full">
             <TableHeader>
               <TableRow style={{ borderBottom: `1px solid ${colors.border}` }}>
                 {cols.map((h) => (

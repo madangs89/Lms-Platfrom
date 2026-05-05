@@ -104,11 +104,20 @@ export const getAllDepartmentsWithHodsAndStudentsCountAndBranchCount = async (
         select: {
           id: true,
           name: true,
+          code: true,
+          is_active: true,
+          hod_id: true,
 
           hod: {
             select: {
               name: true,
+              email: true,
               id: true,
+              roles: {
+                select: {
+                  role: true,
+                },
+              },
             },
           },
 
@@ -143,7 +152,16 @@ export const getAllDepartmentsWithHodsAndStudentsCountAndBranchCount = async (
     const result = departments.map((dept) => ({
       id: dept.id,
       name: dept.name,
-      hod: { name: dept.hod?.name, id: dept.hod?.id } || null,
+      code: dept.code,
+      is_active: dept.is_active,
+      hod_id: dept.hod_id,
+      hod:
+        {
+          name: dept.hod?.name,
+          email: dept.hod?.email,
+          id: dept.hod?.id,
+          roles: dept.hod?.roles.map((r) => r.role) || [],
+        } || null,
       branchCount: dept._count.branches,
       studentCount: studentCountMap[dept.id] || 0,
     }));
