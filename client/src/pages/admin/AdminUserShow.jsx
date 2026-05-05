@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -10,6 +9,7 @@ import {
 import AddUser from "@/mycomponents/admin/AddUser";
 import Header from "@/mycomponents/admin/Header";
 import MetricCard from "@/mycomponents/admin/MetricCard";
+import SearchBar from "@/mycomponents/admin/SearchBar";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import {
@@ -17,13 +17,11 @@ import {
   ChevronRight,
   GraduationCap,
   Pencil,
-  Plus,
-  Search,
   ShieldUser,
   UserRoundPen,
   UserStar,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 
@@ -56,6 +54,7 @@ const roleBadge = (role) =>
   ({
     student: { bg: "#e8f5e9", color: "#2e7d32" },
     lecturer: { bg: "#e3f2fd", color: "#1565c0" },
+    faculty: { bg: "#e3f2fd", color: "#1565c0" },
     hod: { bg: "#fff8e1", color: "#f57f17" },
     admin: { bg: "#fce4ec", color: "#c62828" },
   })[role] ?? { bg: "#f0f0f0", color: "#555" };
@@ -129,10 +128,9 @@ const AdminUserShow = () => {
   const [page, setPage] = useState(1);
 
   // Search
-  const [search, setSearch] = useState("");
-  const [searchResults, setSearchResults] = useState(null);
-  const [searching, setSearching] = useState(false);
-  const searchTimeout = useRef(null);
+  // const [search, setSearch] = useState("");
+
+  const [debounceSearch, setDebounceSearch] = useState("");
 
   // Modal
   const [open, setOpen] = useState(false);
@@ -146,33 +144,33 @@ const AdminUserShow = () => {
     return () => window.removeEventListener("resize", handler);
   }, []);
 
-  useEffect(() => {
-    if (!search.trim()) {
-      setSearchResults(null);
-      return;
-    }
-    clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const { data } = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/search/${encodeURIComponent(search.trim())}`,
-          { withCredentials: true },
-        );
-        if (data.success) setSearchResults(data.users ?? []);
-      } catch (error) {
-        toast.error(
-          error?.response?.data?.message ||
-            error.message ||
-            "Failed to fetch search results",
-        );
-        setSearchResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 400);
-    return () => clearTimeout(searchTimeout.current);
-  }, [search]);
+  const fetchSearchResults = async (query) => {
+    const { debounceSearch } = query;
+
+    const { data } = await axios.get(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/search/${encodeURIComponent(debounceSearch.trim())}`,
+      { withCredentials: true },
+    );
+    return data.users ?? [];
+  };
+
+  const searchQuery = useQuery({
+    queryKey: ["search_users", debounceSearch],
+    queryFn: () => fetchSearchResults({ debounceSearch }),
+    staleTime: 2 * 60 * 1000,
+    onError: (err) => {
+      toast.error(
+        err?.response?.data?.message || err.message || "Failed to fetch users",
+      );
+    },
+    refetchOnWindowFocus: false,
+    retry: 5,
+    retryDelay: 1000,
+    enabled: !!debounceSearch.trim(),
+  });
+
+  const searchResults = searchQuery.data ?? [];
+  const searching = searchQuery.isLoading;
 
   const fetchAllUsersOnRole = async (payload) => {
     const { activeTab, page } = payload;
@@ -201,7 +199,7 @@ const AdminUserShow = () => {
     refetchOnWindowFocus: false,
     retry: 5,
     retryDelay: 1000,
-    enabled: !search.trim(),
+    enabled: !debounceSearch.trim(),
   });
 
   let loading = userQuery.isLoading;
@@ -260,10 +258,10 @@ const AdminUserShow = () => {
     }
   }, [countQuery.error]);
 
-  const displayRows = search.trim()
+  const displayRows = debounceSearch.trim()
     ? (searchResults ?? [])
     : (userQuery.data?.users ?? []);
-  const isSearchMode = !!search.trim();
+  const isSearchMode = !!debounceSearch.trim();
   const showSkeleton = loading || (isSearchMode && searching);
 
   const getAllDepartments = async () => {
@@ -305,8 +303,7 @@ const AdminUserShow = () => {
   const switchTab = (tab) => {
     setActiveTab(tab);
     setPage(1);
-    setSearch("");
-    setSearchResults(null);
+    setDebounceSearch("");
   };
 
   const handleChange = (field, value) => {
@@ -467,52 +464,12 @@ const AdminUserShow = () => {
         </div>
 
         {/* Search bar */}
-        <div
-          className="px-3 sm:px-4 py-2.5 border-b"
-          style={{ borderColor: colors.border }}
-        >
-          <div
-            className="flex items-center gap-2 px-3 h-8 rounded-md border w-full sm:w-64"
-            style={{
-              background: colors.inputBg,
-              borderColor: colors.inputBorder,
-            }}
-          >
-            {searching ? (
-              <div
-                className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin flex-shrink-0"
-                style={{
-                  borderColor: colors.primary,
-                  borderTopColor: "transparent",
-                }}
-              />
-            ) : (
-              <Search
-                className="w-3.5 h-3.5 flex-shrink-0"
-                style={{ color: colors.textMuted }}
-              />
-            )}
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search users..."
-              className="outline-none bg-transparent flex-1 text-[13px] min-w-0"
-              style={{ color: colors.inputText }}
-            />
-            {search && (
-              <button
-                onClick={() => {
-                  setSearch("");
-                  setSearchResults(null);
-                }}
-                className="text-[11px] flex-shrink-0"
-                style={{ color: colors.textMuted }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
+        <SearchBar
+          colors={colors}
+          searching={searching}
+          debounceSearch={debounceSearch}
+          setDebounceSearch={setDebounceSearch}
+        />
 
         {/* Table */}
         <div className="overflow-auto w-full ">
@@ -736,7 +693,7 @@ const AdminUserShow = () => {
           >
             <p className="text-[12px]" style={{ color: colors.textSecondary }}>
               {searchResults.length} result
-              {searchResults.length !== 1 ? "s" : ""} for "{search}"
+              {searchResults.length !== 1 ? "s" : ""} for "{debounceSearch}"
             </p>
           </div>
         )}

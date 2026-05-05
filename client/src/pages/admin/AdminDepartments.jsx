@@ -87,6 +87,12 @@ const AdminDepartments = () => {
           loading={departmentsCountQuery.isLoading}
         />
       </div>
+
+      {/* Tables */}
+      <div
+        className="rounded-lg border w-full "
+        style={{ borderColor: colors.border, background: colors.card }}
+      ></div>
     </div>
   );
 };
