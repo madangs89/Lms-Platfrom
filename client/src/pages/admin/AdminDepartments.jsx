@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import PaginationHandler from "@/mycomponents/shared/PaginationHandler";
 
 const template = {
   hod: {
@@ -112,10 +113,13 @@ const AdminDepartments = () => {
     { key: "studentCount", label: "Students" },
   ];
 
+  const LIMIT = 10;
+
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
   const [page, setPage] = useState(1);
 
+  const [debounceSearch, setDebounceSearch] = useState("");
   // Filter
   const [activeFilter, setActiveFilter] = useState("all");
 
@@ -166,7 +170,7 @@ const AdminDepartments = () => {
           withCredentials: true,
         },
       );
-      return data.result;
+      return data;
     };
 
   const departmentsForTableQuery = useQuery({
@@ -175,6 +179,7 @@ const AdminDepartments = () => {
       fetchDepartmentsForTableWithHodsBranchesStatusCountOfStudentsAndBranches({
         page,
         active: activeFilter,
+        limit: LIMIT,
       }),
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
@@ -198,8 +203,39 @@ const AdminDepartments = () => {
     }
   }, [departmentsForTableQuery.error]);
 
-  const departments = departmentsForTableQuery.data || [];
+  const fetchSearchResults = async (query) => {
+    const { debounceSearch } = query;
+
+    const { data } = await axios.get(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/search/departments/${encodeURIComponent(debounceSearch.trim())}`,
+      { withCredentials: true },
+    );
+    return data.result ?? [];
+  };
+
+  const searchQuery = useQuery({
+    queryKey: ["search_departments", debounceSearch],
+    queryFn: () => fetchSearchResults({ debounceSearch }),
+    staleTime: 2 * 60 * 1000,
+    onError: (err) => {
+      toast.error(
+        err?.response?.data?.message ||
+          err.message ||
+          "Failed to fetch departments",
+      );
+    },
+    refetchOnWindowFocus: false,
+    retry: 5,
+    retryDelay: 1000,
+    enabled: !!debounceSearch.trim(),
+  });
+
+  const departments = debounceSearch.trim()
+    ? (searchQuery.data ?? [])
+    : (departmentsForTableQuery.data?.result ?? []);
   const loading = departmentsForTableQuery.isLoading;
+
+  const isSearchMode = !!debounceSearch.trim();
 
   return (
     <div className="w-full flex flex-col gap-4 overflow-scroll h-screen">
@@ -244,11 +280,15 @@ const AdminDepartments = () => {
 
       {/* Tables */}
       <div
-        className="rounded-lg border w-full h-full "
+        className="rounded-lg border w-full "
         style={{ borderColor: colors.border, background: colors.card }}
       >
         <div className="w-full py-2 flex justify-between items-center flex-col md:flex-row gap-2 px-3">
-          <SearchBar />
+          <SearchBar
+            debounceSearch={debounceSearch}
+            setDebounceSearch={setDebounceSearch}
+            searching={searchQuery.isLoading}
+          />
 
           <Select
             onValueChange={(value) => {
@@ -276,6 +316,19 @@ const AdminDepartments = () => {
           data={departments}
           template={template}
           isLoading={loading}
+        />
+
+        <PaginationHandler
+          page={page}
+          isSearchMode={isSearchMode}
+          setPage={setPage}
+          totalPages={departmentsForTableQuery.data?.totalPages || 1}
+          total={departmentsForTableQuery.data?.total || 0}
+          LIMIT={LIMIT}
+          loading={loading}
+          searching={searchQuery.isLoading}
+          searchResults={searchQuery.data}
+          debounceSearch={debounceSearch}
         />
       </div>
     </div>

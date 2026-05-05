@@ -34,18 +34,18 @@ const PaginationHandler = ({
   page,
   totalPages,
   setPage,
-  isSearchMode,
+  isSearchMode = false,
   total,
   LIMIT = 10,
-  loading,
-  searching,
+  loading = false,
+  searching = false,
   searchResults,
-  debounceSearch,
+  debounceSearch = "",
 }) => {
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
 
-  const pages = getPageNumbers(page, totalPages || 1);
+  const pages = getPageNumbers(page, Math.max(1, totalPages));
 
   return (
     <div>

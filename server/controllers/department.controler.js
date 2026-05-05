@@ -181,7 +181,7 @@ export const getAllDepartmentsWithHodsAndStudentsCountAndBranchCount = async (
 
     return res.status(200).json({
       result,
-      total:Number(total),
+      total: Number(total),
       totalPages: Math.ceil(Number(total) / Number(limit)),
       success: true,
       message: "Departments retrieved successfully",
@@ -346,6 +346,117 @@ export const toggleActive = async (req, res) => {
       message: `Department active status toggled successfully. Toggled To ${updatedDepartment.is_active ? "Active" : "Inactive"}`,
     });
   } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Internal server error", success: false });
+  }
+};
+
+// Searching departments by name or code
+
+export const searchDepartments = async (req, res) => {
+  try {
+    const { query } = req.params;
+
+    console.log(query);
+
+    if (!query.trim()) {
+      return res.status(400).json({
+        message: "Search query is required",
+        success: false,
+      });
+    }
+    const departments = await prisma.department.findMany({
+      where: {
+        OR: [
+          {
+            name: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+          {
+            code: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        is_active: true,
+        hod_id: true,
+
+        hod: {
+          select: {
+            name: true,
+            email: true,
+            id: true,
+            roles: {
+              select: {
+                role: true,
+              },
+            },
+          },
+        },
+
+        _count: {
+          select: {
+            branches: true,
+          },
+        },
+      },
+    });
+
+    // Get student count for each department
+    const departmentIds = departments.map((dept) => dept.id);
+    const studentCounts = await prisma.user.groupBy({
+      by: ["department_id"],
+      where: {
+        department_id: {
+          in: departmentIds,
+        },
+        roles: {
+          some: {
+            role: "student",
+          },
+        },
+      },
+      _count: {
+        _all: true,
+      },
+    });
+
+    const studentCountMap = Object.fromEntries(
+      studentCounts.map((item) => [item.department_id, item._count._all]),
+    );
+    const result = departments.map((dept) => ({
+      id: dept.id,
+      name: dept.name,
+
+      code: dept.code,
+      is_active: dept.is_active,
+      hod_id: dept.hod_id,
+      hod:
+        {
+          name: dept.hod?.name,
+          email: dept.hod?.email,
+          id: dept.hod?.id,
+          roles: dept.hod?.roles.map((r) => r.role) || [],
+        } || null,
+      branchCount: dept._count.branches,
+      studentCount: studentCountMap[dept.id] || 0,
+    }));
+    return res.status(200).json({
+      result,
+      success: true,
+      message: "Departments searched successfully",
+    });
+  } catch (error) {
+    console.log(error);
     return res
       .status(500)
       .json({ message: "Internal server error", success: false });
