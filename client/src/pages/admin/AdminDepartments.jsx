@@ -34,9 +34,7 @@ const template = {
             usn: data?.hod?.usn || null,
             employee_id: data?.hod?.employee_id || null,
           }
-        : {
-            id: uuid(),
-          };
+        : null;
     },
     renderer: (data) => {
       return <UserCellTemplate data={data} />;
@@ -46,7 +44,6 @@ const template = {
     getter: (data) => {
       return {
         name: data.name,
-        id: uuid(),
       };
     },
     renderer: (data) => {
@@ -57,7 +54,6 @@ const template = {
     getter: (data) => {
       return {
         name: data.code,
-        id: uuid(),
       };
     },
     renderer: (data) => {
@@ -68,7 +64,6 @@ const template = {
     getter: (data) => {
       return {
         name: data.is_active ? "active" : "inactive",
-        id: uuid(),
       };
     },
     renderer: (data) => {
@@ -79,7 +74,6 @@ const template = {
     getter: (data) => {
       return {
         name: data.branchCount,
-        id: uuid(),
       };
     },
     renderer: (data) => {
@@ -90,7 +84,6 @@ const template = {
     getter: (data) => {
       return {
         name: data.studentCount,
-        id: uuid(),
       };
     },
     renderer: (data) => {
@@ -143,13 +136,12 @@ const fackeData = [
 
 const AdminDepartments = () => {
   const DepartmentTableColumns = [
-    "Department Name",
-    "Department Code",
-    "Status",
-    "Hod",
-    "Total Branches",
-    "Total Students",
-    "Actions",
+    { key: "name", label: "Department Name" },
+    { key: "code", label: "Department Code" },
+    { key: "is_active", label: "Status" },
+    { key: "hod", label: "HOD" },
+    { key: "branchCount", label: "Branches" },
+    { key: "studentCount", label: "Students" },
   ];
 
   const theme = useSelector((state) => state.theme);
@@ -226,7 +218,7 @@ const AdminDepartments = () => {
 
       {/* Tables */}
       <div
-        className="rounded-lg border w-full "
+        className="rounded-lg border w-full h-full "
         style={{ borderColor: colors.border, background: colors.card }}
       >
         <TableTemplate

@@ -8,18 +8,15 @@ import {
 } from "@/components/ui/table";
 import SkeletonRow from "@/mycomponents/shared/SkeletonRow";
 import React from "react";
+import { useSelector } from "react-redux";
 
-const TableTemplate = ({
-  columns,
-  data,
-  isLoading,
-  colors,
-  LIMIT = 10,
-  template,
-}) => {
+const TableTemplate = ({ columns, data, isLoading, LIMIT = 10, template }) => {
+  const theme = useSelector((state) => state.theme);
+  const colors = theme[theme.currentTheme];
+
   return (
-    <div className="overflow-auto w-full ">
-      <Table className="w-full">
+    <div className="overflow-x-auto w-full scrollbar-thin ">
+      <Table className="min-w-max">
         <TableHeader>
           <TableRow style={{ borderBottom: `1px solid ${colors.border}` }}>
             {columns.map((h) => (
@@ -28,7 +25,7 @@ const TableTemplate = ({
                 className="text-[11px] sm:text-[12px] font-medium whitespace-nowrap px-3 sm:px-4"
                 style={{ color: colors.textSecondary }}
               >
-                {h}
+                {h.label}
               </TableHead>
             ))}
           </TableRow>
@@ -59,12 +56,16 @@ const TableTemplate = ({
                   key={row.id}
                   style={{ borderBottom: `1px solid ${colors.divider}` }}
                 >
-                  {Object.keys(row).map((key) => {
-                    if (template[key]) {
-                      const d = template[key].getter(row);
-                      console.log(key, d);
-                      return template[key].renderer(d);
-                    }
+                  {columns.map((col) => {
+                    const config = template[col.key];
+                    if (!config) return null;
+
+                    const data = config.getter(row);
+                    return (
+                      <React.Fragment key={col.key}>
+                        {config.renderer(data)}
+                      </React.Fragment>
+                    );
                   })}
                 </TableRow>
               );

@@ -15,7 +15,7 @@ const StatusCellTemplate = ({ data }) => {
 
   const sb = statusBadge(data.name);
   return (
-    <TableCell key={data.id} className="px-3 sm:px-4 py-2.5">
+    <TableCell className="px-3 sm:px-4 py-2.5">
       <span
         className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-medium capitalize whitespace-nowrap"
         style={{ background: sb.bg, color: sb.color }}

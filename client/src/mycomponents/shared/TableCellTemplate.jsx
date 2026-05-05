@@ -8,7 +8,6 @@ const TableCellTemplate = ({ data }) => {
 
   return (
     <TableCell
-      key={data.id}
       className="px-4 py-2.5 text-[13px] max-w-[160px]"
       style={{ color: colors.textPrimary }}
     >

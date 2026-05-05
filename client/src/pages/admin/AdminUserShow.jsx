@@ -25,6 +25,11 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 import SkeletonRow from "../../mycomponents/shared/SkeletonRow";
+import TableTemplate from "@/mycomponents/admin/TableTemplate";
+import UserCellTemplate from "@/mycomponents/shared/UserCellTemplate";
+import TableCellTemplate from "@/mycomponents/shared/TableCellTemplate";
+import RoleCellTemplate from "@/mycomponents/shared/RolecellTemplate";
+import StatusCellTemplate from "@/mycomponents/shared/StatusCellTemplate";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const LIMIT = 5;
@@ -49,23 +54,6 @@ const ALL_TABS = [
   { id: "hod", label: "HODs" },
   { id: "admin", label: "Admins" },
 ];
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const roleBadge = (role) =>
-  ({
-    student: { bg: "#e8f5e9", color: "#2e7d32" },
-    lecturer: { bg: "#e3f2fd", color: "#1565c0" },
-    faculty: { bg: "#e3f2fd", color: "#1565c0" },
-    hod: { bg: "#fff8e1", color: "#f57f17" },
-    admin: { bg: "#fce4ec", color: "#c62828" },
-  })[role] ?? { bg: "#f0f0f0", color: "#555" };
-
-const statusBadge = (status) =>
-  ({
-    active: { bg: "#e8f5e9", color: "#2e7d32" },
-    inactive: { bg: "#fce4ec", color: "#c62828" },
-    suspended: { bg: "#fff3e0", color: "#e65100" },
-  })[status] ?? { bg: "#f0f0f0", color: "#555" };
 
 const getPageNumbers = (current, total) => {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -101,7 +89,53 @@ const inputStyle = (colors) => ({
   color: colors.inputText,
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
+const userTemplate = {
+  user: {
+    getter: (user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roles: user.roles || [],
+      usn: user.usn,
+      employee_id: user.employee_id,
+    }),
+    renderer: (data) => <UserCellTemplate data={data} />,
+  },
+  role: {
+    getter: (user) => ({
+      name: user.roles?.map((r) => r.role).join(", ") || user.role || "—",
+      roles: user.roles || [],
+    }),
+    renderer: (data) => <RoleCellTemplate data={data} />,
+  },
+  department: {
+    getter: (user) => ({
+      name: user.department?.name || user.department || "—",
+    }),
+    renderer: (data) => <TableCellTemplate data={data} />,
+  },
+  contact: {
+    getter: (user) => ({
+      id: user.id + "_contact",
+      email: user.email,
+      phone: user.phone,
+    }),
+    renderer: (data) => (
+      <TableCell className="px-4 py-2.5">
+        <p className="text-[12px] truncate max-w-[160px]">{data.email}</p>
+        <p className="text-[11px]">{data.phone || "—"}</p>
+      </TableCell>
+    ),
+  },
+  status: {
+    getter: (user) => ({
+      id: user.id + "_status",
+      name: user.status,
+    }),
+    renderer: (data) => <StatusCellTemplate data={data} />,
+  },
+};
+
 const AdminUserShow = () => {
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
@@ -253,7 +287,6 @@ const AdminUserShow = () => {
     ? (searchResults ?? [])
     : (userQuery.data?.users ?? []);
   const isSearchMode = !!debounceSearch.trim();
-  const showSkeleton = loading || (isSearchMode && searching);
 
   const getAllDepartments = async () => {
     const { data } = await axios.get(
@@ -373,16 +406,14 @@ const AdminUserShow = () => {
 
   const pages = getPageNumbers(page, userQuery?.data?.totalPages || 1);
 
-  const desktopCols = [
-    "User",
-    "Role",
-    "Department",
-    "Contact",
-    "Status",
-    "Actions",
+  const userColumns = [
+    { key: "user", label: "User" },
+    { key: "role", label: "Role" },
+    { key: "department", label: "Department" },
+    { key: "contact", label: "Contact" },
+    { key: "status", label: "Status" },
+    { key: "actions", label: "Actions" },
   ];
-  const mobileCols = ["User", "Role", "Status", "Actions"];
-  const cols = isMobile ? mobileCols : desktopCols;
 
   return (
     <div className="w-full flex flex-col gap-4 overflow-scroll h-screen">
@@ -463,157 +494,13 @@ const AdminUserShow = () => {
         />
 
         {/* Table */}
-        <div className="overflow-auto w-full ">
-          <Table className="w-full h-full">
-            <TableHeader>
-              <TableRow style={{ borderBottom: `1px solid ${colors.border}` }}>
-                {cols.map((h) => (
-                  <TableHead
-                    key={h}
-                    className="text-[11px] sm:text-[12px] font-medium whitespace-nowrap px-3 sm:px-4"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    {h}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
 
-            <TableBody>
-              {showSkeleton &&
-                Array.from({ length: LIMIT }).map((_, i) => (
-                  <SkeletonRow key={i} colors={colors} cols={cols.length} />
-                ))}
-
-              {!showSkeleton && displayRows.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={cols.length}
-                    className="text-center py-10 text-[13px]"
-                    style={{ color: colors.textMuted }}
-                  >
-                    No users found.
-                  </TableCell>
-                </TableRow>
-              )}
-
-              {!showSkeleton &&
-                displayRows.map((user) => {
-                  const roleStr =
-                    user.roles?.map((r) => r.role).join(", ") ??
-                    user.role ??
-                    "—";
-                  const firstRole = user.roles?.[0]?.role ?? user.role;
-                  const rb = roleBadge(firstRole);
-                  const sb = statusBadge(user.status);
-                  const identifier = user.roles?.some(
-                    (r) => r.role === "student",
-                  )
-                    ? `USN: ${user.usn ?? "—"}`
-                    : user.roles?.some((r) =>
-                          ["lecturer", "hod"].includes(r.role),
-                        )
-                      ? `EMP: ${user.employee_id ?? "—"}`
-                      : null;
-                  const deptName =
-                    user.department?.name ?? user.department ?? "—";
-
-                  return (
-                    <TableRow
-                      key={user.id}
-                      style={{ borderBottom: `1px solid ${colors.divider}` }}
-                    >
-                      {/* User — always shown */}
-                      <TableCell className="px-3 sm:px-4 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white text-[11px] sm:text-[12px] font-semibold flex-shrink-0"
-                            style={{ background: colors.primary }}
-                          >
-                            {user.name?.charAt(0)}
-                          </div>
-                          <div className="min-w-0">
-                            <p
-                              className="text-[12px] sm:text-[13px] font-medium leading-tight truncate"
-                              style={{ color: colors.textPrimary }}
-                            >
-                              {user.name}
-                            </p>
-                            {identifier && (
-                              <p
-                                className="text-[10px] sm:text-[11px] truncate"
-                                style={{ color: colors.textSecondary }}
-                              >
-                                {identifier}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      {/* Role — always shown */}
-                      <TableCell className="px-3 sm:px-4 py-2.5">
-                        <span
-                          className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-medium capitalize whitespace-nowrap"
-                          style={{ background: rb.bg, color: rb.color }}
-                        >
-                          {roleStr}
-                        </span>
-                      </TableCell>
-
-                      {/* Department — desktop only */}
-                      {!isMobile && (
-                        <TableCell
-                          className="px-4 py-2.5 text-[13px] max-w-[160px]"
-                          style={{ color: colors.textPrimary }}
-                        >
-                          <span className="truncate block">{deptName}</span>
-                        </TableCell>
-                      )}
-
-                      {/* Contact — desktop only */}
-                      {!isMobile && (
-                        <TableCell className="px-4 py-2.5">
-                          <p
-                            className="text-[12px] truncate max-w-[160px]"
-                            style={{ color: colors.textPrimary }}
-                          >
-                            {user.email}
-                          </p>
-                          <p
-                            className="text-[11px]"
-                            style={{ color: colors.textSecondary }}
-                          >
-                            {user.phone ?? "—"}
-                          </p>
-                        </TableCell>
-                      )}
-
-                      {/* Status — always shown */}
-                      <TableCell className="px-3 sm:px-4 py-2.5">
-                        <span
-                          className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-medium capitalize whitespace-nowrap"
-                          style={{ background: sb.bg, color: sb.color }}
-                        >
-                          {user.status}
-                        </span>
-                      </TableCell>
-
-                      {/* Actions — always shown */}
-                      <TableCell className="px-3 sm:px-4 py-2.5">
-                        <button
-                          className="p-1 sm:p-1.5 rounded hover:opacity-70 transition-opacity"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          <Pencil className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                        </button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-            </TableBody>
-          </Table>
-        </div>
+        <TableTemplate
+          columns={userColumns}
+          data={displayRows}
+          isLoading={loading || (isSearchMode && searching)}
+          template={userTemplate}
+        />
 
         {/* Pagination */}
         {!isSearchMode && (

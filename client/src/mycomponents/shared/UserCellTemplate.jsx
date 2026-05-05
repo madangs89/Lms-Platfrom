@@ -12,7 +12,7 @@ const UserCellTemplate = ({ data }) => {
       ? `EMP: ${data.employee_id ?? "—"}`
       : null;
   return (
-    <TableCell key={data.id} className="px-3 sm:px-4 py-2.5">
+    <TableCell className="px-3 sm:px-4 py-2.5">
       {data && data.name ? (
         <div className="flex items-center gap-2">
           <div
