@@ -1,12 +1,15 @@
 import { Search } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
+import { useSelector } from "react-redux";
 
 const SearchBar = ({
-  colors,
   searching = false,
   debounceSearch,
   setDebounceSearch,
 }) => {
+  const theme = useSelector((state) => state.theme);
+  const colors = theme[theme.currentTheme];
+
   const [search, setSearch] = useState("");
 
   const searchTimeout = useRef(null);

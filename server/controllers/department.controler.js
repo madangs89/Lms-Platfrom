@@ -90,14 +90,22 @@ export const getAllDepartmentsWithHodsAndStudentsCountAndBranchCount = async (
   res,
 ) => {
   try {
-    const { is_active = true, page = 1, limit = 10 } = req.params;
+    const { is_active = "active", page = 1, limit = 10 } = req.params;
 
     const skip = (page - 1) * limit;
+
+    let whereCondition = {};
+
+    if (is_active === "active") {
+      whereCondition.is_active = true;
+    } else if (is_active === "inactive") {
+      whereCondition.is_active = false;
+    }
 
     let [departments, studentCounts] = await prisma.$transaction([
       // 1. Departments + HOD + branch count
       prisma.department.findMany({
-        where: { is_active: Boolean(is_active) },
+        where: whereCondition,
         skip,
         take: Number(limit),
         orderBy: { name: "asc" },

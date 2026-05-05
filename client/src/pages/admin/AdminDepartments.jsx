@@ -14,11 +14,12 @@ import {
   ShieldBan,
   UsersRound,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 import StatusCellTemplate from "@/mycomponents/shared/StatusCellTemplate";
 import UserCellTemplate from "@/mycomponents/shared/UserCellTemplate";
+import SearchBar from "@/mycomponents/admin/SearchBar";
 
 const template = {
   hod: {
@@ -92,48 +93,6 @@ const template = {
   },
 };
 
-const fackeData = [
-  {
-    id: "baa7a012-0f45-4b64-8b85-dbc4ee9cbad5",
-    name: "COMPUTER SCIENCE AND ENGINEERING",
-    code: "CSE",
-    is_active: true,
-    hod_id: "830a409c-f2d3-4ca2-89e6-331597d7bc5f",
-    hod: {
-      name: "Suresh",
-      email: "suresh@gmail.com",
-      id: "830a409c-f2d3-4ca2-89e6-331597d7bc5f",
-      roles: ["hod"],
-    },
-    branchCount: 0,
-    studentCount: 1,
-  },
-  {
-    id: "c253c4f8-535f-470f-b4c0-f369b5b3ff59",
-    name: "ELECTRONIC AND COMMUNICATION ENGINEERING",
-    code: "ECE",
-    is_active: true,
-    hod_id: null,
-    hod: {
-      roles: [],
-    },
-    branchCount: 0,
-    studentCount: 0,
-  },
-  {
-    id: "f106eb3b-61fd-44c2-9ced-cf5aa322aa8d",
-    name: "ELECTRONIC AND ELECTRICAL ENGINEERING",
-    code: "EEE",
-    is_active: true,
-    hod_id: null,
-    hod: {
-      roles: [],
-    },
-    branchCount: 0,
-    studentCount: 1,
-  },
-];
-
 const AdminDepartments = () => {
   const DepartmentTableColumns = [
     { key: "name", label: "Department Name" },
@@ -146,6 +105,10 @@ const AdminDepartments = () => {
 
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
+  const [page, setPage] = useState(1);
+
+  // Filter
+  const [activeFilter, setActiveFilter] = useState("all");
 
   const [open, setOpen] = useState(false);
 
@@ -174,6 +137,60 @@ const AdminDepartments = () => {
       );
     },
   });
+
+  useEffect(() => {
+    if (departmentsCountQuery.error) {
+      toast.error(
+        departmentsCountQuery.error?.response?.data?.message ||
+          departmentsCountQuery.error.message ||
+          "Failed to fetch department counts",
+      );
+    }
+  }, [departmentsCountQuery.error]);
+
+  const fetchDepartmentsForTableWithHodsBranchesStatusCountOfStudentsAndBranches =
+    async (payload) => {
+      const { page, active, limit = 10 } = payload;
+      const { data } = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/active-departments-hods-students-branches/${active}/${page}/${limit}`,
+        {
+          withCredentials: true,
+        },
+      );
+      return data.result;
+    };
+
+  const departmentsForTableQuery = useQuery({
+    queryKey: ["departments-for-table", page, activeFilter],
+    queryFn: () =>
+      fetchDepartmentsForTableWithHodsBranchesStatusCountOfStudentsAndBranches({
+        page,
+        active: activeFilter,
+      }),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+    retry: 3,
+    onError: (error) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to fetch departments",
+      );
+    },
+  });
+
+  useEffect(() => {
+    if (departmentsForTableQuery.error) {
+      toast.error(
+        departmentsForTableQuery.error?.response?.data?.message ||
+          departmentsForTableQuery.error.message ||
+          "Failed to fetch departments",
+      );
+    }
+  }, [departmentsForTableQuery.error]);
+
+  const departments = departmentsForTableQuery.data || [];
+  const loading = departmentsForTableQuery.isLoading;
 
   return (
     <div className="w-full flex flex-col gap-4 overflow-scroll h-screen">
@@ -221,11 +238,14 @@ const AdminDepartments = () => {
         className="rounded-lg border w-full h-full "
         style={{ borderColor: colors.border, background: colors.card }}
       >
+        <SearchBar />
+
         <TableTemplate
           colors={colors}
           columns={DepartmentTableColumns}
-          data={fackeData}
+          data={departments}
           template={template}
+          isLoading={loading}
         />
       </div>
     </div>

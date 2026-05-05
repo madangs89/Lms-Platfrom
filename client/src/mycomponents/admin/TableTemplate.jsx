@@ -10,7 +10,13 @@ import SkeletonRow from "@/mycomponents/shared/SkeletonRow";
 import React from "react";
 import { useSelector } from "react-redux";
 
-const TableTemplate = ({ columns, data, isLoading, LIMIT = 10, template }) => {
+const TableTemplate = ({
+  columns,
+  data,
+  isLoading = false,
+  LIMIT = 10,
+  template,
+}) => {
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
 
