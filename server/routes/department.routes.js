@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  assignOrChangeHod,
   createDepartment,
   getAllActiveDepartments,
   getAllDepartmentsWithHodsAndStudentsCountAndBranchCount,
@@ -69,6 +70,12 @@ departmentRouter.patch(
   authMiddleware,
   adminMiddleware,
   updateDepartment,
+);
+departmentRouter.patch(
+  "/update/hod",
+  authMiddleware,
+  adminMiddleware,
+  assignOrChangeHod,
 );
 
 export default departmentRouter;

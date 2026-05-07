@@ -597,10 +597,6 @@ export const assignOrChangeHod = async (req, res) => {
   try {
     const { departmentId, oldHod_id, newHod_id } = req.body;
 
-    // ─────────────────────────────────────
-    // Validation
-    // ─────────────────────────────────────
-
     if (!departmentId) {
       return res.status(400).json({
         message: "Department ID is required",
@@ -630,10 +626,6 @@ export const assignOrChangeHod = async (req, res) => {
       });
     }
 
-    // ─────────────────────────────────────
-    // Check Department Exists
-    // ─────────────────────────────────────
-
     const department = await prisma.department.findUnique({
       where: { id: departmentId },
 
@@ -650,10 +642,6 @@ export const assignOrChangeHod = async (req, res) => {
       });
     }
 
-    // ─────────────────────────────────────
-    // Check New HOD Exists
-    // ─────────────────────────────────────
-
     const newHodUser = await prisma.user.findUnique({
       where: { id: newHod_id },
 
@@ -668,10 +656,6 @@ export const assignOrChangeHod = async (req, res) => {
         success: false,
       });
     }
-
-    // ─────────────────────────────────────
-    // Check already HOD elsewhere
-    // ─────────────────────────────────────
 
     const alreadyHod = await prisma.department.findFirst({
       where: {
@@ -693,10 +677,6 @@ export const assignOrChangeHod = async (req, res) => {
         success: false,
       });
     }
-
-    // ─────────────────────────────────────
-    // ASSIGN NEW HOD
-    // ─────────────────────────────────────
 
     if (!oldHod_id) {
       // Department already has HOD
@@ -749,11 +729,6 @@ export const assignOrChangeHod = async (req, res) => {
       });
     }
 
-    // ─────────────────────────────────────
-    // CHANGE EXISTING HOD
-    // ─────────────────────────────────────
-
-    // Validate old HOD exists
     const oldHodUser = await prisma.user.findUnique({
       where: {
         id: oldHod_id,

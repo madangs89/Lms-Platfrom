@@ -18,12 +18,6 @@ import {
   Briefcase,
   BookOpen,
   ScrollText,
-  CalendarDays,
-  Search,
-  CheckCircle2,
-  X,
-  ChevronRight,
-  Clock,
 } from "lucide-react";
 import axios from "axios";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -33,203 +27,7 @@ import { useSearchFaculty } from "@/hooks/useSearchFaculty";
 import SearchBar from "../SearchBar";
 import TableTemplate from "../TableTemplate";
 import { userColumns, userTemplate } from "@/configs/template";
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const DEPT = {
-  id: "dept-01",
-  name: "Computer Science Engineering",
-  code: "CSE",
-  is_active: true,
-  created_at: "2023-01-15T10:30:00Z",
-  updated_at: "2024-05-20T16:25:00Z",
-  hod: {
-    id: "f1",
-    name: "Dr. John Smith",
-    email: "john.smith@edulearn.com",
-    employee_id: "FSI023",
-    designation: "Professor",
-  },
-  branches: [
-    {
-      id: "br-01",
-      name: "Computer Science",
-      code: "CS",
-      is_active: true,
-      specCount: 2,
-    },
-    {
-      id: "br-02",
-      name: "Information Technology",
-      code: "IT",
-      is_active: true,
-      specCount: 2,
-    },
-    {
-      id: "br-03",
-      name: "Data Science",
-      code: "DS",
-      is_active: true,
-      specCount: 2,
-    },
-  ],
-  stats: {
-    totalBranches: 3,
-    totalSpecializations: 6,
-    totalUsers: 248,
-    totalCoordinators: 5,
-  },
-};
-
-const FACULTY = [
-  {
-    id: "f2",
-    name: "Dr. Sarah Johnson",
-    email: "sarah@edulearn.com",
-    employee_id: "EMP021",
-    designation: "Associate Professor",
-  },
-  {
-    id: "f3",
-    name: "Prof. Michael Brown",
-    email: "michael@edulearn.com",
-    employee_id: "EMP034",
-    designation: "Professor",
-  },
-  {
-    id: "f4",
-    name: "Dr. Asha Reddy",
-    email: "asha@edulearn.com",
-    employee_id: "EMP045",
-    designation: "Assistant Professor",
-  },
-  {
-    id: "f5",
-    name: "Dr. Rajesh Nair",
-    email: "rajesh@edulearn.com",
-    employee_id: "EMP056",
-    designation: "Associate Professor",
-  },
-  {
-    id: "f6",
-    name: "Prof. Kavya Menon",
-    email: "kavya@edulearn.com",
-    employee_id: "EMP067",
-    designation: "Professor",
-  },
-];
-
-const USERS = [
-  {
-    id: "u1",
-    name: "Rahul Sharma",
-    email: "rahul@edu.com",
-    role: "student",
-    status: "active",
-    joined: "May 15, 2024",
-  },
-  {
-    id: "u2",
-    name: "Dr. Sarah Johnson",
-    email: "sarah@edu.com",
-    role: "faculty",
-    status: "active",
-    joined: "May 10, 2024",
-  },
-  {
-    id: "u3",
-    name: "Prof. Michael Brown",
-    email: "michael@edu.com",
-    role: "faculty",
-    status: "active",
-    joined: "May 8, 2024",
-  },
-  {
-    id: "u4",
-    name: "Amit Kumar",
-    email: "amit@edu.com",
-    role: "student",
-    status: "active",
-    joined: "May 5, 2024",
-  },
-  {
-    id: "u5",
-    name: "Priya Patel",
-    email: "priya@edu.com",
-    role: "student",
-    status: "inactive",
-    joined: "May 3, 2024",
-  },
-];
-
-const COORDINATORS = [
-  {
-    id: "c1",
-    name: "Dr. Sarah Johnson",
-    email: "sarah@edu.com",
-    spec: "Computer Science",
-    specCode: "CS",
-    year: 2,
-    sem: 3,
-    active: true,
-    assigned: "Jan 10, 2024",
-  },
-  {
-    id: "c2",
-    name: "Prof. Michael Brown",
-    email: "michael@edu.com",
-    spec: "Data Science",
-    specCode: "DS",
-    year: 1,
-    sem: 2,
-    active: true,
-    assigned: "Jan 12, 2024",
-  },
-  {
-    id: "c3",
-    name: "Dr. Asha Reddy",
-    email: "asha@edu.com",
-    spec: "Information Technology",
-    specCode: "IT",
-    year: 3,
-    sem: 5,
-    active: false,
-    assigned: "Jul 1, 2023",
-  },
-];
-
-const LOGS = [
-  {
-    id: "l1",
-    action: "HOD Changed",
-    by: "Admin",
-    detail: "HOD updated to Dr. John Smith",
-    time: "May 20, 2024",
-  },
-  {
-    id: "l2",
-    action: "Branch Added",
-    by: "Admin",
-    detail: "Branch 'Data Science' was added to this department",
-    time: "Mar 10, 2024",
-  },
-  {
-    id: "l3",
-    action: "Status Updated",
-    by: "Admin",
-    detail: "Department status changed to Active",
-    time: "Jun 1, 2023",
-  },
-  {
-    id: "l4",
-    action: "Department Created",
-    by: "System",
-    detail: "Department CSE was created in the system",
-    time: "Jan 15, 2023",
-  },
-];
-
-// ─── Tiny helpers ─────────────────────────────────────────────────────────────
+import { Button } from "@/components/ui/button";
 
 const initials = (name) =>
   name
@@ -396,298 +194,6 @@ function StatBox({ icon, label, value }) {
   );
 }
 
-// ─── Change HOD Flow ──────────────────────────────────────────────────────────
-
-function ChangeHODDrawer({ currentHod, onClose }) {
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState(null);
-  const [done, setDone] = useState(false);
-
-  const list = FACULTY.filter(
-    (f) =>
-      f.name.toLowerCase().includes(search.toLowerCase()) ||
-      f.employee_id.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        background: "rgba(15,23,42,0.55)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 18,
-          width: 480,
-          maxWidth: "95vw",
-          boxShadow: "0 32px 80px rgba(0,0,0,0.22)",
-          overflow: "hidden",
-        }}
-      >
-        {done ? (
-          /* ── Success ── */
-          <div style={{ padding: 48, textAlign: "center" }}>
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: "50%",
-                background: "#dcfce7",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 20px",
-              }}
-            >
-              <CheckCircle2 size={32} color="#16a34a" />
-            </div>
-            <p
-              style={{
-                fontSize: 20,
-                fontWeight: 800,
-                color: "#1e293b",
-                margin: "0 0 8px",
-              }}
-            >
-              HOD Updated!
-            </p>
-            <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 28px" }}>
-              <strong>{selected.name}</strong> is now the Head of Department.
-            </p>
-            <button onClick={onClose} style={btnStyle("#16a34a")}>
-              Done
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* Header */}
-            <div
-              style={{
-                padding: "22px 24px 18px",
-                borderBottom: "1px solid #f1f5f9",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-              }}
-            >
-              <div>
-                <p
-                  style={{
-                    fontSize: 17,
-                    fontWeight: 800,
-                    color: "#1e293b",
-                    margin: 0,
-                  }}
-                >
-                  Change Head of Department
-                </p>
-                <p
-                  style={{ fontSize: 13, color: "#94a3b8", margin: "4px 0 0" }}
-                >
-                  Pick a faculty member to assign as HOD
-                </p>
-              </div>
-              <button
-                onClick={onClose}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#94a3b8",
-                  padding: 4,
-                }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div style={{ padding: "18px 24px" }}>
-              {/* Current HOD banner */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "12px 14px",
-                  background: "#f8fafc",
-                  borderRadius: 10,
-                  marginBottom: 16,
-                }}
-              >
-                <Av name={currentHod.name} size={38} green />
-                <div>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "#1e293b",
-                      margin: 0,
-                    }}
-                  >
-                    Current: {currentHod.name}
-                  </p>
-                  <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>
-                    {currentHod.employee_id} · {currentHod.designation}
-                  </p>
-                </div>
-                <Pill label="HOD" green />
-              </div>
-
-              {/* Search */}
-              <div style={{ position: "relative", marginBottom: 12 }}>
-                <Search
-                  size={15}
-                  style={{
-                    position: "absolute",
-                    left: 12,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "#94a3b8",
-                  }}
-                />
-                <input
-                  autoFocus
-                  placeholder="Search faculty by name or ID..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px 10px 36px",
-                    border: "1.5px solid #e2e8f0",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    color: "#1e293b",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    fontFamily: "inherit",
-                  }}
-                />
-              </div>
-
-              {/* Faculty list */}
-              <div
-                style={{
-                  maxHeight: 280,
-                  overflowY: "auto",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                  marginBottom: 20,
-                }}
-              >
-                {list.length === 0 && (
-                  <p
-                    style={{
-                      textAlign: "center",
-                      color: "#94a3b8",
-                      fontSize: 14,
-                      padding: "24px 0",
-                    }}
-                  >
-                    No faculty found
-                  </p>
-                )}
-                {list.map((f) => {
-                  const sel = selected?.id === f.id;
-                  return (
-                    <div
-                      key={f.id}
-                      onClick={() => setSelected(f)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: "12px 14px",
-                        borderRadius: 10,
-                        cursor: "pointer",
-                        border: `2px solid ${sel ? "#16a34a" : "#f1f5f9"}`,
-                        background: sel ? "#f0fdf4" : "#f8fafc",
-                        transition: "all 0.12s",
-                      }}
-                    >
-                      <Av name={f.name} size={40} green={sel} />
-                      <div style={{ flex: 1 }}>
-                        <p
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: "#1e293b",
-                            margin: 0,
-                          }}
-                        >
-                          {f.name}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: 12,
-                            color: "#64748b",
-                            margin: "2px 0 0",
-                          }}
-                        >
-                          {f.designation} · {f.employee_id}
-                        </p>
-                      </div>
-                      {sel && <CheckCircle2 size={20} color="#16a34a" />}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Selected preview */}
-              {selected && (
-                <div
-                  style={{
-                    padding: "12px 14px",
-                    background: "#f0fdf4",
-                    border: "1.5px solid #bbf7d0",
-                    borderRadius: 10,
-                    marginBottom: 16,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <CheckCircle2 size={16} color="#16a34a" />
-                  <p style={{ fontSize: 13, color: "#166534", margin: 0 }}>
-                    <strong>{selected.name}</strong> will be assigned as the new
-                    HOD
-                  </p>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div
-                style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}
-              >
-                <button onClick={onClose} style={outlineBtn}>
-                  Cancel
-                </button>
-                <button
-                  disabled={!selected}
-                  onClick={() => setDone(true)}
-                  style={btnStyle(
-                    selected ? "#16a34a" : "#e2e8f0",
-                    !selected ? "#94a3b8" : "#fff",
-                  )}
-                >
-                  Confirm Change
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 const btnStyle = (bg, color = "#fff") => ({
   padding: "10px 24px",
   borderRadius: 10,
@@ -700,21 +206,7 @@ const btnStyle = (bg, color = "#fff") => ({
   fontFamily: "inherit",
 });
 
-const outlineBtn = {
-  padding: "10px 24px",
-  borderRadius: 10,
-  border: "1.5px solid #e2e8f0",
-  background: "#fff",
-  color: "#475569",
-  fontSize: 14,
-  fontWeight: 600,
-  cursor: "pointer",
-  fontFamily: "inherit",
-};
-
-// ─── TAB: Overview ────────────────────────────────────────────────────────────
-
-function OverviewTab({ onChangeHOD, department }) {
+function OverviewTab({ department }) {
   const {
     hod,
     hod_id,
@@ -807,24 +299,7 @@ function OverviewTab({ onChangeHOD, department }) {
                 </span>
               </div>
             </div>
-            <button
-              onClick={onChangeHOD}
-              style={{
-                marginTop: 18,
-                width: "100%",
-                padding: "10px 0",
-                border: "1.5px solid #16a34a",
-                borderRadius: 10,
-                background: "#fff",
-                color: "#16a34a",
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              Change HOD
-            </button>
+          
           </Card>
         )}
 
@@ -1109,9 +584,12 @@ function EditTab({ department }) {
 
 // ─── TAB: HOD Management ──────────────────────────────────────────────────────
 
-function HODTab({ onChangeHOD, department }) {
+function HODTab({ department }) {
   const { hod, hod_id } = department;
+  const theme = useSelector((state) => state.theme);
+  const colors = theme[theme.currentTheme];
 
+  const queryClient = useQueryClient();
   const [debounceSearch, setDebounceSearch] = useState("");
 
   const [selectedUser, setSelectedUser] = useState(null);
@@ -1131,6 +609,71 @@ function HODTab({ onChangeHOD, department }) {
   }, [searchFacultyQuery.error]);
 
   const facultyData = searchFacultyQuery.data ?? [];
+
+  const updateOrAssignHod = async (payload) => {
+    const { departmentId, oldHod_id, newHod_id } = payload;
+
+    const { data } = await axios.patch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/update/hod`,
+      {
+        oldHod_id: oldHod_id,
+        newHod_id: newHod_id,
+        departmentId: departmentId,
+      },
+      {
+        withCredentials: true,
+      },
+    );
+    return data;
+  };
+
+  const updateHodMutation = useMutation({
+    mutationFn: updateOrAssignHod,
+    onSuccess: (data) => {
+      toast.success("HOD updated successfully");
+      queryClient.invalidateQueries(["singleDepartment"]);
+      queryClient.invalidateQueries(["search-faculty"]);
+      queryClient.invalidateQueries(["departments-count"]);
+      queryClient.invalidateQueries(["departments-for-table"]);
+      queryClient.invalidateQueries(["users"]);
+      queryClient.invalidateQueries(["userCounts"]);
+      queryClient.invalidateQueries(["available-hod-departments"]);
+      queryClient.invalidateQueries(["search_departments"]);
+      setSelectedUser(null);
+      setDebounceSearch("");
+    },
+    onError: (err) => {
+      toast.error(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to update HOD. Try again.",
+      );
+    },
+  });
+
+  const handleUpdateHod = () => {
+    if (!selectedUser) {
+      toast.error("Please select a faculty to assign as HOD");
+      return;
+    }
+
+    if (selectedUser == hod_id) {
+      toast.error("Selected faculty is already the current HOD");
+      return;
+    }
+
+    let oldHodId = department.hod_id;
+    if (!department.hod_id) {
+      oldHodId = false;
+    }
+    let newHodId = selectedUser;
+    updateHodMutation.mutate({
+      departmentId: department.id,
+      oldHod_id: oldHodId,
+      newHod_id: newHodId,
+    });
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card>
@@ -1197,13 +740,25 @@ function HODTab({ onChangeHOD, department }) {
           />
         </div>
       </Card>
+      <Button
+        style={{ background: colors.primaryHover, color: colors.sidebarText }}
+        className="cursor-pointer"
+        onClick={handleUpdateHod}
+        disabled={
+          !selectedUser ||
+          selectedUser.id === hod_id ||
+          updateHodMutation.isPending
+        }
+      >
+        {updateHodMutation.isPending ? <Spinner /> : "Assign as HOD"}
+      </Button>
     </div>
   );
 }
 
 // ─── TAB: Branches ────────────────────────────────────────────────────────────
 
-function BranchesTab() {
+function BranchesTab({ department }) {
   return (
     <Card>
       <CardTitle>All Branches</CardTitle>
@@ -1221,12 +776,12 @@ function BranchesTab() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {DEPT.branches.map((b) => (
+          {department?.branches?.map((b) => (
             <TableRow key={b.id} style={{ borderColor: "#f1f5f9" }}>
               <TableCell
                 style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}
               >
-                {b.name}
+                {b?.name}
               </TableCell>
               <TableCell>
                 <span
@@ -1240,13 +795,13 @@ function BranchesTab() {
                     fontWeight: 700,
                   }}
                 >
-                  {b.code}
+                  {b?.code}
                 </span>
               </TableCell>
               <TableCell
                 style={{ fontSize: 14, color: "#475569", fontWeight: 600 }}
               >
-                {b.specCount}
+                {b?._count?.specializations}
               </TableCell>
               <TableCell>
                 <Pill
@@ -1263,255 +818,14 @@ function BranchesTab() {
   );
 }
 
-// ─── TAB: Users ───────────────────────────────────────────────────────────────
-
-function UsersTab() {
-  return (
-    <Card>
-      <CardTitle>Department Users</CardTitle>
-      <Table>
-        <TableHeader>
-          <TableRow style={{ background: "#f8fafc" }}>
-            {["User", "Email", "Role", "Status", "Joined"].map((h) => (
-              <TableHead
-                key={h}
-                style={{ fontSize: 13, fontWeight: 700, color: "#64748b" }}
-              >
-                {h}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {USERS.map((u) => (
-            <TableRow key={u.id} style={{ borderColor: "#f1f5f9" }}>
-              <TableCell>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Av name={u.name} size={34} />
-                  <span
-                    style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}
-                  >
-                    {u.name}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell style={{ fontSize: 13, color: "#64748b" }}>
-                {u.email}
-              </TableCell>
-              <TableCell>
-                <Pill
-                  label={u.role.charAt(0).toUpperCase() + u.role.slice(1)}
-                  green={u.role === "faculty"}
-                  blue={u.role === "student"}
-                />
-              </TableCell>
-              <TableCell>
-                <Pill
-                  label={u.status === "active" ? "Active" : "Inactive"}
-                  green={u.status === "active"}
-                  red={u.status !== "active"}
-                />
-              </TableCell>
-              <TableCell style={{ fontSize: 13, color: "#94a3b8" }}>
-                {u.joined}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
-  );
-}
-
-// ─── TAB: Coordinators ────────────────────────────────────────────────────────
-
-function CoordinatorsTab() {
-  return (
-    <Card>
-      <CardTitle>Coordinator Assignments</CardTitle>
-      <Table>
-        <TableHeader>
-          <TableRow style={{ background: "#f8fafc" }}>
-            {[
-              "Faculty",
-              "Specialization",
-              "Year / Sem",
-              "Status",
-              "Assigned",
-            ].map((h) => (
-              <TableHead
-                key={h}
-                style={{ fontSize: 13, fontWeight: 700, color: "#64748b" }}
-              >
-                {h}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {COORDINATORS.map((c) => (
-            <TableRow key={c.id} style={{ borderColor: "#f1f5f9" }}>
-              <TableCell>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Av name={c.name} size={34} />
-                  <div>
-                    <p
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: "#1e293b",
-                        margin: 0,
-                      }}
-                    >
-                      {c.name}
-                    </p>
-                    <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>
-                      {c.email}
-                    </p>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      background: "#f0fdf4",
-                      color: "#16a34a",
-                      padding: "2px 8px",
-                      borderRadius: 6,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {c.specCode}
-                  </span>
-                  <span style={{ fontSize: 13, color: "#475569" }}>
-                    {c.spec}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell
-                style={{ fontSize: 14, fontWeight: 700, color: "#1e293b" }}
-              >
-                Year {c.year} / Sem {c.sem}
-              </TableCell>
-              <TableCell>
-                <Pill
-                  label={c.active ? "Active" : "Inactive"}
-                  green={c.active}
-                  red={!c.active}
-                />
-              </TableCell>
-              <TableCell style={{ fontSize: 13, color: "#94a3b8" }}>
-                {c.assigned}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
-  );
-}
-
-// ─── TAB: Activity Log ────────────────────────────────────────────────────────
-
-function LogsTab() {
-  return (
-    <Card>
-      <CardTitle>Activity Log</CardTitle>
-      <div>
-        {LOGS.map((log, i) => (
-          <div
-            key={log.id}
-            style={{
-              display: "flex",
-              gap: 18,
-              paddingBottom: i < LOGS.length - 1 ? 24 : 0,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                paddingTop: 2,
-              }}
-            >
-              <div
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: "50%",
-                  background: "#16a34a",
-                  flexShrink: 0,
-                }}
-              />
-              {i < LOGS.length - 1 && (
-                <div
-                  style={{
-                    width: 2,
-                    flex: 1,
-                    background: "#e2e8f0",
-                    marginTop: 6,
-                  }}
-                />
-              )}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 4,
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: "#1e293b",
-                    margin: 0,
-                  }}
-                >
-                  {log.action}
-                </p>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                    color: "#94a3b8",
-                  }}
-                >
-                  <Clock size={12} />
-                  <span style={{ fontSize: 12 }}>{log.time}</span>
-                </div>
-              </div>
-              <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 4px" }}>
-                {log.detail}
-              </p>
-              <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>
-                By: <strong style={{ color: "#64748b" }}>{log.by}</strong>
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-// ─── MAIN MODAL ───────────────────────────────────────────────────────────────
-
 const TABS = [
   { id: "overview", label: "Overview", icon: Building2 },
   { id: "edit", label: "Edit Department", icon: ScrollText },
   { id: "hod", label: "HOD Management", icon: UserCheck },
   { id: "branches", label: "Branches", icon: BookOpen },
-  { id: "users", label: "Users", icon: Users },
-  { id: "coordinators", label: "Coordinators", icon: GraduationCap },
-  { id: "logs", label: "Activity Log", icon: CalendarDays },
+  // { id: "users", label: "Users", icon: Users },
+  // { id: "coordinators", label: "Coordinators", icon: GraduationCap },
+  // { id: "logs", label: "Activity Log", icon: CalendarDays },
 ];
 
 export default function DepartmentModal({
@@ -1521,7 +835,6 @@ export default function DepartmentModal({
   setCurrentSelectedId,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
-  const [showHOD, setShowHOD] = useState(false);
 
   console.log({ currentSelectedId });
 
@@ -1559,13 +872,6 @@ export default function DepartmentModal({
 
   return (
     <>
-      {showHOD && (
-        <ChangeHODDrawer
-          currentHod={departmentData?.hod}
-          onClose={() => setShowHOD(false)}
-        />
-      )}
-
       <Dialog
         open={open}
         onOpenChange={() => {
@@ -1697,24 +1003,15 @@ export default function DepartmentModal({
                 }}
               >
                 {activeTab === "overview" && (
-                  <OverviewTab
-                    onChangeHOD={() => setShowHOD(true)}
-                    department={departmentData}
-                  />
+                  <OverviewTab department={departmentData} />
                 )}
                 {activeTab === "edit" && (
                   <EditTab department={departmentData} activeTab={activeTab} />
                 )}
-                {activeTab === "hod" && (
-                  <HODTab
-                    onChangeHOD={() => setShowHOD(true)}
-                    department={departmentData}
-                  />
+                {activeTab === "hod" && <HODTab department={departmentData} />}
+                {activeTab === "branches" && (
+                  <BranchesTab department={departmentData} />
                 )}
-                {activeTab === "branches" && <BranchesTab />}
-                {activeTab === "users" && <UsersTab />}
-                {activeTab === "coordinators" && <CoordinatorsTab />}
-                {activeTab === "logs" && <LogsTab />}
               </div>
             </>
           )}

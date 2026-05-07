@@ -90,7 +90,6 @@ export default function CreateDepartmentModal({ onClose, open }) {
       queryClient.invalidateQueries(["users"]);
       queryClient.invalidateQueries(["userCounts"]);
       queryClient.invalidateQueries(["available-hod-departments"]);
-      queryClient.invalidateQueries(["search_departments"]);
       resetAndClose();
     },
     onError: (error) => {
