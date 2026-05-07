@@ -3,7 +3,7 @@ import { prisma } from "../config/prisma.js";
 
 export const createDepartment = async (req, res) => {
   try {
-    let { name, code, hod_id } = req.body;
+    let { name, code, hod_id, status = "active" } = req.body;
 
     if (!name || !code || !hod_id) {
       return res
@@ -11,8 +11,22 @@ export const createDepartment = async (req, res) => {
         .json({ message: "All fields are required", success: false });
     }
 
+    if (!req.user.id) {
+      return res.status(401).json({
+        message: "Unauthorized: User information is missing in the request",
+        success: false,
+      });
+    }
+
     name = name.trim().toUpperCase();
     code = code.trim().toUpperCase();
+
+    let is_active = true;
+    if (status == "active") {
+      is_active = true;
+    } else if (status == "inactive") {
+      is_active = false;
+    }
 
     const isAlreadyHod = await prisma.department.findFirst({
       where: {
@@ -27,19 +41,36 @@ export const createDepartment = async (req, res) => {
       });
     }
 
-    const newDepartment = await prisma.department.create({
-      data: {
-        name,
-        code,
-        hod_id,
-      },
-    });
+    const [newDepartment] = await prisma.$transaction([
+      prisma.department.create({
+        data: {
+          name,
+          code,
+          hod_id,
+          is_active,
+        },
+      }),
+
+      prisma.user.update({
+        where: { id: hod_id },
+        data: {
+          roles: {
+            create: {
+              role: "hod",
+              granted_by: req.user.id,
+            },
+          },
+        },
+      }),
+    ]);
     return res.status(201).json({
       department: newDepartment,
       success: true,
       message: "Department created successfully",
     });
   } catch (error) {
+    console.log(error);
+
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
         const fields = error.meta?.target || [];

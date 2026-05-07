@@ -432,3 +432,86 @@ export const getCountOfAllUserOnTheBasisOfRole = async (req, res) => {
     });
   }
 };
+
+export const searchFacultyOnly = async (req, res) => {
+  try {
+    const { query } = req.params;
+
+    const search = query?.trim();
+
+    if (!search) {
+      return res.status(400).json({
+        message: "Search query cannot be empty",
+        success: false,
+      });
+    }
+
+    let faculty = await prisma.user.findMany({
+      where: {
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+          { employee_id: { contains: search, mode: "insensitive" } },
+          { phone: { contains: search, mode: "insensitive" } },
+        ],
+
+        roles: {
+          some: {
+            role: "faculty",
+          },
+          none: {
+            role: "hod",
+          },
+        },
+      },
+
+      take: 10,
+
+      orderBy: {
+        name: "asc",
+      },
+
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        employee_id: true,
+        phone: true,
+
+        status: true,
+        roles: {
+          select: {
+            role: true,
+          },
+        },
+
+        department: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
+    });
+
+    // faculty = faculty.map((d, index) => {
+    //   return {
+    //     ...d,
+    //     roles: d.roles.map((r) => r.role),
+    //   };
+    // });
+    return res.status(200).json({
+      message: "Faculty retrieved successfully",
+      success: true,
+      faculty,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};

@@ -17,7 +17,7 @@ import { useSelector } from "react-redux";
 
 import TableTemplate from "@/mycomponents/admin/TableTemplate";
 import PaginationHandler from "@/mycomponents/shared/PaginationHandler";
-import { userTemplate } from "@/configs/template";
+import { userColumns, userTemplate } from "@/configs/template";
 
 const LIMIT = 5;
 
@@ -128,13 +128,8 @@ const AdminUserShow = () => {
     queryKey: ["users", activeTab, page],
     queryFn: () => fetchAllUsersOnRole({ activeTab, page }),
     staleTime: 2 * 60 * 1000,
-    onError: (err) => {
-      toast.error(
-        err?.response?.data?.message || err.message || "Failed to fetch users",
-      );
-    },
     refetchOnWindowFocus: false,
-    retry: 5,
+    retry: 3,
     retryDelay: 1000,
     enabled: !debounceSearch.trim(),
   });
@@ -315,15 +310,6 @@ const AdminUserShow = () => {
     setOpen(false);
     setForm(INITIAL_FORM);
   };
-
-  const userColumns = [
-    { key: "user", label: "User" },
-    { key: "role", label: "Role" },
-    { key: "department", label: "Department" },
-    { key: "contact", label: "Contact" },
-    { key: "status", label: "Status" },
-    { key: "actions", label: "Actions" },
-  ];
 
   return (
     <div className="w-full flex flex-col gap-4 overflow-scroll h-screen">

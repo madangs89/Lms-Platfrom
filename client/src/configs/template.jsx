@@ -50,3 +50,20 @@ export const userTemplate = {
     renderer: (data) => <StatusCellTemplate data={data} />,
   },
 };
+
+export const userColumns = [
+  { key: "user", label: "User" },
+  { key: "role", label: "Role" },
+  { key: "department", label: "Department" },
+  { key: "contact", label: "Contact" },
+  { key: "status", label: "Status" },
+];
+
+export const DepartmentTableColumns = [
+  { key: "name", label: "Department Name" },
+  { key: "code", label: "Department Code" },
+  { key: "is_active", label: "Status" },
+  { key: "hod", label: "HOD" },
+  { key: "branchCount", label: "Branches" },
+  { key: "studentCount", label: "Students" },
+];

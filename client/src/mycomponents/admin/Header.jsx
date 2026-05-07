@@ -10,7 +10,7 @@ const Header = ({
   onClick,
 }) => {
   return (
-    <div className="flex w-full justify-between items-center mt-3">
+    <div className="flex w-full md:justify-between md:flex-row flex-col md:items-center mt-3">
       <div className="flex flex-col gap-0.5">
         <h1
           className="text-xl sm:text-2xl font-semibold"

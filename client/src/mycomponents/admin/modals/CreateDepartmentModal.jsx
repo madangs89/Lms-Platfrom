@@ -1,386 +1,350 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import TableTemplate from "@/mycomponents/admin/TableTemplate";
+import { userColumns, userTemplate } from "@/configs/template";
 import SearchBar from "../SearchBar";
+import toast from "react-hot-toast";
+import { Spinner } from "@/components/ui/spinner";
 
-const users = [
-  {
-    id: 1,
-    name: "Dr. John Smith",
-    email: "john.smith@edulearn.com",
-    empId: "EMP: FS1023",
-    dept: "Computer Science Engineering",
-    role: "Professor",
-    status: "Active",
-    avatar: "JS",
-  },
-  {
-    id: 2,
-    name: "Dr. Sarah Johnson",
-    email: "sarah.j@edulearn.com",
-    empId: "EMP: FS1045",
-    dept: "Information Science Engineering",
-    role: "Associate Professor",
-    status: "Active",
-    avatar: "SJ",
-  },
-  {
-    id: 3,
-    name: "Dr. Michael Brown",
-    email: "michael.b@edulearn.com",
-    empId: "EMP: FS1067",
-    dept: "Electronics & Communication",
-    role: "Professor",
-    status: "Active",
-    avatar: "MB",
-  },
-  {
-    id: 4,
-    name: "Dr. Emily Davis",
-    email: "emily.d@edulearn.com",
-    empId: "EMP: FS1089",
-    dept: "Computer Science Engineering",
-    role: "Associate Professor",
-    status: "Active",
-    avatar: "ED",
-  },
-  {
-    id: 5,
-    name: "Dr. Robert Wilson",
-    email: "robert.w@edulearn.com",
-    empId: "EMP: FS1101",
-    dept: "Mechanical Engineering",
-    role: "Professor",
-    status: "Active",
-    avatar: "RW",
-  },
-];
-
-const avatarColors = ["#3dba5c", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6"];
-
-export default function CreateDepartmentModal({ onClose, open }) {
+export default function CreateDepartmentModal({
+  onClose,
+  open,
+  mutationLoading,
+}) {
   const currentTheme = useSelector((s) => s.theme.currentTheme);
   const theme = useSelector((s) => s.theme[currentTheme]);
-
+  const queryClient = useQueryClient();
   const [debounceSearch, setDebounceSearch] = useState("");
   const [deptName, setDeptName] = useState("");
   const [deptCode, setDeptCode] = useState("");
-  const [status, setStatus] = useState("Active");
-  const [search, setSearch] = useState("");
-  const [selectedUser, setSelectedUser] = useState(1);
+  const [status, setStatus] = useState("active");
+  const [selectedUser, setSelectedUser] = useState(null);
 
-  const handleSubmit = () => {
-    alert(`Department "${deptName}" created!`);
+  const searchFacultyQuery = useQuery({
+    queryKey: ["search-faculty", debounceSearch],
+    queryFn: async () => {
+      const { data } = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/search/faculty-only/${debounceSearch}`,
+        { withCredentials: true },
+      );
+      return data.faculty ?? [];
+    },
+    enabled: !!debounceSearch.trim(),
+    refetchOnWindowFocus: false,
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  useEffect(() => {
+    if (searchFacultyQuery.error) {
+      toast.error(
+        searchFacultyQuery.error.response?.data?.message ||
+          searchFacultyQuery.error.message ||
+          "Enable To Search Faculty",
+      );
+    }
+  }, [searchFacultyQuery.error]);
+
+  const facultyData = searchFacultyQuery.data ?? [];
+
+  const createDepartment = async (payload) => {
+    const { deptName, deptCode, status, selectedUser } = payload;
+    const { data } = await axios.post(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/create`,
+      {
+        name: deptName,
+        code: deptCode,
+        status,
+        hod_id: selectedUser,
+      },
+      { withCredentials: true },
+    );
+    return data;
+  };
+
+  const resetAndClose = () => {
+    setDeptName("");
+    setDeptCode("");
+    setStatus("active");
+    setDebounceSearch("");
+    setSelectedUser(null);
     onClose?.();
   };
 
-  const styles = {
-    overlay: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.45)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 1000,
-      padding: 16,
+  const createDeptMutation = useMutation({
+    mutationFn: () =>
+      createDepartment({ deptName, deptCode, status, selectedUser }),
+    onSuccess: (data) => {
+      toast.success(data.message || "Department created successfully");
+      queryClient.invalidateQueries(["search-faculty"]);
+      queryClient.invalidateQueries(["departments-count"]);
+      queryClient.invalidateQueries(["departments-for-table"]);
+      queryClient.invalidateQueries(["users"]);
+      queryClient.invalidateQueries(["userCounts"]);
+      queryClient.invalidateQueries(["available-hod-departments"]);
+      queryClient.invalidateQueries(["search_departments"]);
+      resetAndClose();
     },
-    modal: {
-      background: theme.surface,
-      borderRadius: 16,
-      width: "100%",
-      maxWidth: 680,
-      maxHeight: "92vh",
-      display: "flex",
-      flexDirection: "column",
-      boxShadow: `0 20px 60px ${theme.shadow}`,
-      overflow: "hidden",
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to create department",
+      );
     },
-    header: {
-      display: "flex",
-      alignItems: "flex-start",
-      justifyContent: "space-between",
-      padding: "24px 28px 16px",
-      borderBottom: `1px solid ${theme.divider}`,
-      flexShrink: 0,
-    },
-    title: {
-      margin: 0,
-      fontSize: 20,
-      fontWeight: 700,
-      color: theme.textPrimary,
-    },
-    subtitle: { margin: "4px 0 0", fontSize: 13, color: theme.textSecondary },
-    closeBtn: {
-      background: "none",
-      border: "none",
-      cursor: "pointer",
-      fontSize: 16,
-      color: theme.textMuted,
-      padding: 4,
-      lineHeight: 1,
-      borderRadius: 6,
-    },
-    body: { overflowY: "auto", flex: 1, padding: "0 28px" },
-    section: { padding: "20px 0" },
-    sectionTitle: {
-      margin: "0 0 16px",
-      fontSize: 15,
-      fontWeight: 700,
-      color: theme.textPrimary,
-    },
-    sectionSub: {
-      margin: "-8px 0 14px",
-      fontSize: 13,
-      color: theme.textSecondary,
-    },
-    row: { display: "flex", gap: 16, flexWrap: "wrap" },
-    field: {
-      flex: 1,
-      minWidth: 200,
-      display: "flex",
-      flexDirection: "column",
-      gap: 6,
-      marginBottom: 16,
-    },
-    label: { fontSize: 13, fontWeight: 600, color: theme.textPrimary },
-    input: {
-      padding: "10px 14px",
-      borderRadius: 8,
-      border: `1px solid ${theme.inputBorder}`,
-      background: theme.inputBg,
-      color: theme.inputText,
-      fontSize: 14,
-      outline: "none",
-    },
-    select: {
-      padding: "10px 14px",
-      borderRadius: 8,
-      border: `1px solid ${theme.inputBorder}`,
-      background: theme.inputBg,
-      color: theme.inputText,
-      fontSize: 14,
-      outline: "none",
-      cursor: "pointer",
-    },
-    divider: { height: 1, background: theme.divider, margin: "0 0 4px" },
-    searchWrap: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      border: `1px solid ${theme.inputBorder}`,
-      borderRadius: 8,
-      padding: "8px 14px",
-      background: theme.inputBg,
-      marginBottom: 14,
-    },
-    searchIcon: { fontSize: 14, opacity: 0.6 },
-    searchInput: {
-      border: "none",
-      outline: "none",
-      background: "transparent",
-      flex: 1,
-      fontSize: 14,
-      color: theme.inputText,
-    },
-    tableWrap: {
-      border: `1px solid ${theme.border}`,
-      borderRadius: 10,
-      overflow: "auto",
-      maxHeight: 260,
-    },
-    table: { width: "100%", borderCollapse: "collapse", minWidth: 500 },
-    th: {
-      padding: "10px 14px",
-      textAlign: "left",
-      fontSize: 12,
-      fontWeight: 600,
-      color: theme.textSecondary,
-      background: theme.background,
-      borderBottom: `1px solid ${theme.border}`,
-      whiteSpace: "nowrap",
-    },
-    tr: {
-      borderBottom: `1px solid ${theme.divider}`,
-      transition: "background 0.15s",
-    },
-    td: { padding: "10px 14px", verticalAlign: "middle" },
-    userCell: { display: "flex", alignItems: "center", gap: 10 },
-    radioWrap: { flexShrink: 0 },
-    radioDot: { width: 8, height: 8, borderRadius: "50%", background: "#fff" },
-    avatar: {
-      width: 34,
-      height: 34,
-      borderRadius: "50%",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 11,
-      fontWeight: 700,
-      color: "#fff",
-      flexShrink: 0,
-    },
-    userName: {
-      fontSize: 13,
-      fontWeight: 600,
-      color: theme.textPrimary,
-      whiteSpace: "nowrap",
-    },
-    userEmail: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      whiteSpace: "nowrap",
-    },
-    empId: { fontSize: 12, color: theme.textSecondary, whiteSpace: "nowrap" },
-    cellText: { fontSize: 13, color: theme.textPrimary },
-    note: {
-      display: "flex",
-      gap: 10,
-      alignItems: "flex-start",
-      background: theme.primarySoft,
-      border: `1px solid ${theme.border}`,
-      borderRadius: 8,
-      padding: "12px 14px",
-      marginTop: 14,
-    },
-    noteIcon: { fontSize: 16, flexShrink: 0, marginTop: 1 },
-    noteText: {
-      margin: 0,
-      fontSize: 13,
-      color: theme.textSecondary,
-      lineHeight: 1.5,
-    },
-    footer: {
-      display: "flex",
-      justifyContent: "flex-end",
-      gap: 12,
-      padding: "16px 28px",
-      borderTop: `1px solid ${theme.divider}`,
-      flexShrink: 0,
-    },
-    cancelBtn: {
-      padding: "10px 24px",
-      borderRadius: 8,
-      border: `1px solid ${theme.border}`,
-      background: "transparent",
-      color: theme.textPrimary,
-      fontSize: 14,
-      fontWeight: 600,
-      cursor: "pointer",
-    },
-    submitBtn: {
-      padding: "10px 24px",
-      borderRadius: 8,
-      border: "none",
-      background: theme.primary,
-      color: "#fff",
-      fontSize: 14,
-      fontWeight: 600,
-      cursor: "pointer",
-    },
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  const handleSubmit = () => {
+    if (!deptName.trim() || !deptCode.trim() || !status) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (!selectedUser) {
+      toast.error("Please select a Head of Department (HOD)");
+      return;
+    }
+    createDeptMutation.mutate({
+      deptName,
+      deptCode,
+      status,
+      selectedUser,
+    });
   };
 
-  if (!open) return null;
+  const inputStyle = {
+    background: theme.inputBg,
+    borderColor: theme.inputBorder,
+    color: theme.inputText,
+  };
 
   return (
-    <div style={styles.overlay}>
-      <div style={styles.modal}>
-        {/* Header */}
-        <div style={styles.header}>
-          <div>
-            <h2 style={styles.title}>Add Department</h2>
-            <p style={styles.subtitle}>
-              Fill in the details to create a new department.
-            </p>
-          </div>
-          <button onClick={onClose} style={styles.closeBtn}>
-            ✕
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={(v) => !v && resetAndClose()}>
+      <DialogContent
+        className="flex flex-col gap-0 p-0 overflow-hidden"
+        style={{
+          maxWidth: 680,
+          width: "calc(100vw - 32px)",
+          maxHeight: "92vh",
+          background: theme.surface,
+          borderColor: theme.border,
+          color: theme.textPrimary,
+        }}
+      >
+        {/* ── Header ── */}
+        <DialogHeader
+          className="px-7 pt-6 pb-4 shrink-0"
+          style={{ borderBottom: `1px solid ${theme.divider}` }}
+        >
+          <DialogTitle
+            className="text-[20px] font-bold leading-snug"
+            style={{ color: theme.textPrimary }}
+          >
+            Add Department
+          </DialogTitle>
+          <DialogDescription
+            className="text-[13px] mt-0.5"
+            style={{ color: theme.textSecondary }}
+          >
+            Fill in the details to create a new department.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div style={styles.body}>
-          {/* Section 1 */}
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>1. Department Information</h3>
+        {/* ── Scrollable body ── */}
+        <div className="flex-1 overflow-y-auto px-7">
+          {/* ─── Section 1 — Department Information ─── */}
+          <section className="py-5">
+            <h3
+              className="text-[15px] font-bold mb-4"
+              style={{ color: theme.textPrimary }}
+            >
+              1. Department Information
+            </h3>
 
-            <div style={styles.row}>
-              <div style={styles.field}>
-                <label style={styles.label}>
+            {/* Name + Code — side by side, wrap on small screens */}
+            <div className="flex flex-wrap gap-4 mb-4">
+              <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                <Label
+                  className="text-[13px] font-semibold"
+                  style={{ color: theme.textPrimary }}
+                >
                   Department Name <span style={{ color: theme.danger }}>*</span>
-                </label>
-                <input
-                  style={styles.input}
+                </Label>
+                <Input
                   placeholder="Enter department name"
                   value={deptName}
                   onChange={(e) => setDeptName(e.target.value)}
+                  className="h-9 text-sm focus-visible:ring-1 focus-visible:ring-offset-0"
+                  style={inputStyle}
                 />
               </div>
-              <div style={styles.field}>
-                <label style={styles.label}>
+
+              <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                <Label
+                  className="text-[13px] font-semibold"
+                  style={{ color: theme.textPrimary }}
+                >
                   Department Code <span style={{ color: theme.danger }}>*</span>
-                </label>
-                <input
-                  style={styles.input}
+                </Label>
+                <Input
                   placeholder="Enter unique department code"
                   value={deptCode}
                   onChange={(e) => setDeptCode(e.target.value)}
+                  className="h-9 text-sm focus-visible:ring-1 focus-visible:ring-offset-0"
+                  style={inputStyle}
                 />
               </div>
             </div>
 
-            <div style={{ ...styles.field, maxWidth: 280 }}>
-              <label style={styles.label}>
-                Status <span style={{ color: theme.danger }}>*</span>
-              </label>
-              <select
-                style={styles.select}
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
+            {/* Status */}
+            <div className="flex flex-col gap-1.5" style={{ maxWidth: 280 }}>
+              <Label
+                className="text-[13px] font-semibold"
+                style={{ color: theme.textPrimary }}
               >
-                <option>Active</option>
-                <option>Inactive</option>
-              </select>
+                Status <span style={{ color: theme.danger }}>*</span>
+              </Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger
+                  className="h-9 text-sm focus:ring-1 focus:ring-offset-0"
+                  style={inputStyle}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent
+                  style={{
+                    background: theme.surface,
+                    borderColor: theme.border,
+                    color: theme.textPrimary,
+                  }}
+                >
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
+          </section>
 
-          <div style={styles.divider} />
+          {/* Thin divider */}
+          <div className="h-px w-full" style={{ background: theme.divider }} />
 
-          {/* Section 2 */}
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>
+          {/* ─── Section 2 — Assign HOD ─── */}
+          <section className="py-5">
+            <h3
+              className="text-[15px] font-bold mb-1"
+              style={{ color: theme.textPrimary }}
+            >
               2. Assign Head of Department (HOD)
             </h3>
-            <p style={styles.sectionSub}>
+            <p
+              className="text-[13px] mb-4"
+              style={{ color: theme.textSecondary }}
+            >
               Search and select a user to assign as Head of Department.
             </p>
 
-            <SearchBar
-              debounceSearch={debounceSearch}
-              setDebounceSearch={setDebounceSearch}
-            />
+            {/* SearchBar + Table wrapped in a themed border */}
+            <div
+              className="rounded-lg border w-full overflow-hidden"
+              style={{ borderColor: theme.border }}
+            >
+              <SearchBar
+                searching={searchFacultyQuery.isLoading}
+                debounceSearch={debounceSearch}
+                setDebounceSearch={setDebounceSearch}
+                handleClose={() => {
+                  setSelectedUser(null);
+                  setDebounceSearch("");
+                }}
+              />
+              <TableTemplate
+                columns={userColumns}
+                data={facultyData}
+                isLoading={searchFacultyQuery.isLoading}
+                template={userTemplate}
+                isSelectRequired={true}
+                selectedId={selectedUser}
+                setSelectedId={setSelectedUser}
+              />
+            </div>
 
-            {/* Note */}
-            <div style={styles.note}>
-              <span style={styles.noteIcon}>ℹ️</span>
-              <p style={styles.noteText}>
-                <strong>Note:</strong> A single user cannot be the HOD of two
-                departments. If the selected user is already assigned as HOD of
-                another department, they will be removed from that department
-                and assigned here.
+            {/* Info note */}
+            <div
+              className="flex gap-2.5 items-start rounded-lg mt-3.5 p-3"
+              style={{
+                background: theme.primarySoft,
+                border: `1px solid ${theme.border}`,
+              }}
+            >
+              <span className="text-base shrink-0 mt-px">ℹ️</span>
+              <p
+                className="text-[13px] leading-relaxed m-0"
+                style={{ color: theme.textSecondary }}
+              >
+                <strong style={{ color: theme.textPrimary }}>Note:</strong> A
+                single user cannot be the HOD of two departments. If the
+                selected user is already assigned as HOD of another department,
+                they will be removed from that department and assigned here.
               </p>
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* Footer */}
-        <div style={styles.footer}>
-          <button onClick={onClose} style={styles.cancelBtn}>
+        {/* ── Footer ── */}
+        <DialogFooter
+          className="flex justify-end gap-3 px-7 py-6 shrink-0"
+          style={{ borderTop: `1px solid ${theme.divider}` }}
+        >
+          <Button
+            variant="outline"
+            onClick={resetAndClose}
+            className="text-[13px] font-semibold px-5 h-9"
+            style={{
+              background: "transparent",
+              borderColor: theme.border,
+              color: theme.textPrimary,
+            }}
+          >
             Cancel
-          </button>
-          <button onClick={handleSubmit} style={styles.submitBtn}>
-            Create Department
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={createDeptMutation.isPending}
+            className="text-[13px] font-semibold px-5 h-9 hover:opacity-90 transition-opacity disabled:opacity-60"
+            style={{
+              background: theme.primary,
+              color: "#fff",
+              border: "none",
+            }}
+          >
+            {createDeptMutation.isPending ? <Spinner /> : "Create Department"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -32,6 +32,7 @@ import {
 import PaginationHandler from "@/mycomponents/shared/PaginationHandler";
 import DepartmentModal from "@/mycomponents/admin/modals/DepartmentModal";
 import CreateDepartmentModal from "@/mycomponents/admin/modals/CreateDepartmentModal";
+import { DepartmentTableColumns } from "@/configs/template";
 
 const template = {
   hod: {
@@ -104,16 +105,6 @@ const template = {
 };
 
 const AdminDepartments = () => {
-  const DepartmentTableColumns = [
-    { key: "name", label: "Department Name" },
-    { key: "code", label: "Department Code" },
-    { key: "is_active", label: "Status" },
-    { key: "hod", label: "HOD" },
-    { key: "branchCount", label: "Branches" },
-    { key: "studentCount", label: "Students" },
-    { key: "actions", label: "Actions" },
-  ];
-
   const LIMIT = 10;
 
   const theme = useSelector((state) => state.theme);
@@ -242,7 +233,7 @@ const AdminDepartments = () => {
   const isSearchMode = !!debounceSearch.trim();
 
   return (
-    <div className="w-full flex flex-col gap-4 overflow-scroll h-screen">
+    <div className="w-full flex flex-col gap-4 h-screen overflow-y-auto ">
       {/* ── Header ── */}
 
       <Header
@@ -284,47 +275,47 @@ const AdminDepartments = () => {
 
       {/* Tables */}
       <div
-        className="rounded-lg border w-full "
+        className="rounded-lg border  flex-1 overflow-y-auto min-h-0 "
         style={{ borderColor: colors.border, background: colors.card }}
       >
-        <div className="w-full py-2 flex justify-between items-center flex-col md:flex-row gap-2 px-3">
-          <SearchBar
-            debounceSearch={debounceSearch}
-            setDebounceSearch={setDebounceSearch}
-            searching={searchQuery.isLoading}
+        <div className="rounded-lg border w-full   ">
+          <div className="w-full py-2 flex justify-between items-center flex-col md:flex-row gap-2 px-3">
+            <SearchBar
+              debounceSearch={debounceSearch}
+              setDebounceSearch={setDebounceSearch}
+              searching={searchQuery.isLoading}
+            />
+
+            <Select
+              onValueChange={(value) => {
+                setActiveFilter(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full max-w-48">
+                <SelectValue placeholder="Select Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Status</SelectLabel>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          <TableTemplate
+            colors={colors}
+            columns={DepartmentTableColumns}
+            data={departments}
+            template={template}
+            isLoading={loading}
+            isActionRequired={true}
+            setModalOpen={setModalOpen}
+            setCurrentId={setCurrentSelectedId}
           />
-
-          <Select
-            onValueChange={(value) => {
-              setActiveFilter(value);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-full max-w-48">
-              <SelectValue placeholder="Select Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Status</SelectLabel>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
         </div>
-
-        <TableTemplate
-          colors={colors}
-          columns={DepartmentTableColumns}
-          data={departments}
-          template={template}
-          isLoading={loading}
-          isActionRequired={true}
-          setModalOpen={setModalOpen}
-          setCurrentId={setCurrentSelectedId}
-        />
-
         <PaginationHandler
           page={page}
           isSearchMode={isSearchMode}

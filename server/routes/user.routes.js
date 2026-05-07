@@ -4,6 +4,7 @@ import {
   getAllUsersWthPagination,
   getCountOfActiveStudents,
   getCountOfAllUserOnTheBasisOfRole,
+  searchFacultyOnly,
   searchUsers,
 } from "../controllers/user.controler.js";
 import { authMiddleware } from "../middlewares/auth.middelware.js";
@@ -24,6 +25,12 @@ userRouter.get(
   getAllUsersWthPagination,
 );
 userRouter.get("/search/:query", authMiddleware, adminMiddleware, searchUsers);
+userRouter.get(
+  "/search/faculty-only/:query",
+  authMiddleware,
+  adminMiddleware,
+  searchFacultyOnly,
+);
 userRouter.get(
   "/get-role-user-count",
   authMiddleware,

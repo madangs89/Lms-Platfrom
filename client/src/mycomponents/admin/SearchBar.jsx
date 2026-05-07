@@ -6,6 +6,7 @@ const SearchBar = ({
   searching = false,
   debounceSearch,
   setDebounceSearch,
+  handleClose,
 }) => {
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
@@ -16,6 +17,7 @@ const SearchBar = ({
   const handleOnClick = () => {
     setSearch("");
     setDebounceSearch("");
+    handleClose?.();
   };
 
   useEffect(() => {
