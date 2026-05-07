@@ -16,13 +16,9 @@ import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 
 import TableTemplate from "@/mycomponents/admin/TableTemplate";
-import UserCellTemplate from "@/mycomponents/shared/UserCellTemplate";
-import TableCellTemplate from "@/mycomponents/shared/TableCellTemplate";
-import RoleCellTemplate from "@/mycomponents/shared/RolecellTemplate";
-import StatusCellTemplate from "@/mycomponents/shared/StatusCellTemplate";
 import PaginationHandler from "@/mycomponents/shared/PaginationHandler";
+import { userTemplate } from "@/configs/template";
 
-// ── Constants ─────────────────────────────────────────────────────────────────
 const LIMIT = 5;
 
 const ROLES = ["student", "faculty", "hod", "admin"];
@@ -51,53 +47,6 @@ const inputStyle = (colors) => ({
   borderColor: colors.inputBorder,
   color: colors.inputText,
 });
-
-const userTemplate = {
-  user: {
-    getter: (user) => ({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      roles: user.roles || [],
-      usn: user.usn,
-      employee_id: user.employee_id,
-    }),
-    renderer: (data) => <UserCellTemplate data={data} />,
-  },
-  role: {
-    getter: (user) => ({
-      name: user.roles?.map((r) => r.role).join(", ") || user.role || "—",
-      roles: user.roles || [],
-    }),
-    renderer: (data) => <RoleCellTemplate data={data} />,
-  },
-  department: {
-    getter: (user) => ({
-      name: user.department?.name || user.department || "—",
-    }),
-    renderer: (data) => <TableCellTemplate data={data} />,
-  },
-  contact: {
-    getter: (user) => ({
-      id: user.id + "_contact",
-      email: user.email,
-      phone: user.phone,
-    }),
-    renderer: (data) => (
-      <TableCell className="px-4 py-2.5">
-        <p className="text-[12px] truncate max-w-[160px]">{data.email}</p>
-        <p className="text-[11px]">{data.phone || "—"}</p>
-      </TableCell>
-    ),
-  },
-  status: {
-    getter: (user) => ({
-      id: user.id + "_status",
-      name: user.status,
-    }),
-    renderer: (data) => <StatusCellTemplate data={data} />,
-  },
-};
 
 const AdminUserShow = () => {
   const theme = useSelector((state) => state.theme);
@@ -448,14 +397,12 @@ const AdminUserShow = () => {
 
         {/* Search bar */}
         <SearchBar
-          colors={colors}
           searching={searching}
           debounceSearch={debounceSearch}
           setDebounceSearch={setDebounceSearch}
         />
 
         {/* Table */}
-
         <TableTemplate
           columns={userColumns}
           data={displayRows}

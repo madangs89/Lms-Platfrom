@@ -18,6 +18,9 @@ model Department {
   branches               Branch[]
   user                   User[]                   @relation("DepartmentUsers")
   coordinatorAssignments CoordinatorAssignments[]
+
+  @@unique([name, code, hod_id])
+  @@index([hod_id])
 }
 
 model Branch {
@@ -33,6 +36,7 @@ model Branch {
   coordinatorAssignments CoordinatorAssignments[]
 
   @@unique([name, department_id])
+  @@index([department_id])
 }
 
 model Specialization {

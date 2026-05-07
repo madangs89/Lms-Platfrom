@@ -71,7 +71,7 @@ const TableTemplate = ({
                       return (
                         <TableCell
                           onClick={() => {
-                            setModalOpen(true);
+                            setModalOpen && setModalOpen(true);
                             setCurrentId && setCurrentId(row.id);
                           }}
                           key={col.key}

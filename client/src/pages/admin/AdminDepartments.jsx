@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import PaginationHandler from "@/mycomponents/shared/PaginationHandler";
 import DepartmentModal from "@/mycomponents/admin/modals/DepartmentModal";
+import CreateDepartmentModal from "@/mycomponents/admin/modals/CreateDepartmentModal";
 
 const template = {
   hod: {
@@ -336,15 +337,18 @@ const AdminDepartments = () => {
           searchResults={searchQuery.data}
           debounceSearch={debounceSearch}
         />
-
-        {/* Modal */}
-        <DepartmentModal
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          currentSelectedId={currentSelectedId}
-          setCurrentSelectedId={setCurrentSelectedId}
-        />
       </div>
+
+      {/* Department Info Modal */}
+      <DepartmentModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        currentSelectedId={currentSelectedId}
+        setCurrentSelectedId={setCurrentSelectedId}
+      />
+
+      {/* Create Department Modal */}
+      <CreateDepartmentModal open={open} onClose={() => setOpen(false)} />
     </div>
   );
 };

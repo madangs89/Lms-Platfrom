@@ -3,9 +3,9 @@ import { prisma } from "../config/prisma.js";
 
 export const createDepartment = async (req, res) => {
   try {
-    let { name, code } = req.body;
+    let { name, code, hod_id } = req.body;
 
-    if (!name || !code) {
+    if (!name || !code || !hod_id) {
       return res
         .status(400)
         .json({ message: "All fields are required", success: false });
@@ -13,20 +13,29 @@ export const createDepartment = async (req, res) => {
 
     name = name.trim().toUpperCase();
     code = code.trim().toUpperCase();
-    const department = await prisma.department.create({
+
+    const isAlreadyHod = await prisma.department.findFirst({
+      where: {
+        hod_id,
+      },
+    });
+
+    if (isAlreadyHod) {
+      return res.status(400).json({
+        message: "This user is already a HOD of another department",
+        success: false,
+      });
+    }
+
+    const newDepartment = await prisma.department.create({
       data: {
         name,
         code,
+        hod_id,
       },
     });
-    if (!department) {
-      return res
-        .status(500)
-        .json({ message: "Failed to create department", success: false });
-    }
-
     return res.status(201).json({
-      department,
+      department: newDepartment,
       success: true,
       message: "Department created successfully",
     });
