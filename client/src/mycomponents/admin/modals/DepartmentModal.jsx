@@ -9,6 +9,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Building2,
   GraduationCap,
@@ -18,6 +25,8 @@ import {
   Briefcase,
   BookOpen,
   ScrollText,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import axios from "axios";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -27,9 +36,10 @@ import { useSearchFaculty } from "@/hooks/useSearchFaculty";
 import SearchBar from "../SearchBar";
 import TableTemplate from "../TableTemplate";
 import { userColumns, userTemplate } from "@/configs/template";
-import { Button } from "@/components/ui/button";
 
-const initials = (name) =>
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const initials = (name = "") =>
   name
     .split(" ")
     .map((n) => n[0])
@@ -37,85 +47,187 @@ const initials = (name) =>
     .slice(0, 2)
     .toUpperCase();
 
-function Av({ name, size = 36, green = false }) {
+function Avatar({ name, size = 36, color = "green" }) {
+  const palettes = {
+    green: { bg: "bg-green-100", text: "text-green-700" },
+    slate: { bg: "bg-slate-100", text: "text-slate-600" },
+  };
+  const p = palettes[color] ?? palettes.slate;
   return (
     <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        flexShrink: 0,
-        background: green ? "#dcfce7" : "#f1f5f9",
-        color: green ? "#16a34a" : "#475569",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontWeight: 700,
-        fontSize: size * 0.33,
-        letterSpacing: "-0.5px",
-      }}
+      className={`${p.bg} ${p.text} rounded-full flex items-center justify-center font-bold shrink-0`}
+      style={{ width: size, height: size, fontSize: size * 0.33 }}
     >
       {initials(name)}
     </div>
   );
 }
 
-function Pill({ label, green, yellow, red, blue }) {
-  let bg = "#f1f5f9",
-    color = "#475569";
-  if (green) {
-    bg = "#dcfce7";
-    color = "#16a34a";
-  }
-  if (yellow) {
-    bg = "#fef3c7";
-    color = "#d97706";
-  }
-  if (red) {
-    bg = "#fee2e2";
-    color = "#dc2626";
-  }
-  if (blue) {
-    bg = "#dbeafe";
-    color = "#2563eb";
-  }
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "3px 10px",
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 600,
-        background: bg,
-        color,
-      }}
-    >
-      {label}
-    </span>
+function StatusBadge({ active }) {
+  return active ? (
+    <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
+      Active
+    </Badge>
+  ) : (
+    <Badge className="bg-red-100 text-red-600 border-red-200 hover:bg-red-100">
+      Inactive
+    </Badge>
   );
 }
 
-function InfoRow({ label, children }) {
+// ─── Skeleton Loaders ─────────────────────────────────────────────────────────
+
+function HeaderSkeleton({ theme }) {
   return (
     <div
+      className="px-7 pt-6 pb-0"
       style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "11px 0",
-        borderBottom: "1px solid #f1f5f9",
+        background: theme.surface,
+        borderBottom: `1px solid ${theme.divider}`,
       }}
     >
-      <span style={{ fontSize: 14, color: "#94a3b8" }}>{label}</span>
-      <span
+      <div className="flex items-center gap-4 mb-5">
+        <Skeleton
+          className="w-14 h-14 rounded-2xl"
+          style={{ background: theme.divider }}
+        />
+        <div className="flex-1 space-y-2">
+          <Skeleton
+            className="h-6 w-48 rounded-md"
+            style={{ background: theme.divider }}
+          />
+          <Skeleton
+            className="h-4 w-72 rounded-md"
+            style={{ background: theme.divider }}
+          />
+        </div>
+      </div>
+      <div className="flex gap-2 pb-0">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton
+            key={i}
+            className="h-10 w-28 rounded-none rounded-t-md"
+            style={{ background: theme.divider }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OverviewSkeleton({ theme }) {
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="rounded-xl border p-5 space-y-4"
+          style={{ background: theme.surface, borderColor: theme.border }}
+        >
+          <Skeleton
+            className="h-4 w-24 rounded"
+            style={{ background: theme.divider }}
+          />
+          {[1, 2, 3, 4].map((j) => (
+            <div
+              key={j}
+              className="flex justify-between items-center py-2"
+              style={{ borderBottom: `1px solid ${theme.divider}` }}
+            >
+              <Skeleton
+                className="h-3.5 w-20 rounded"
+                style={{ background: theme.divider }}
+              />
+              <Skeleton
+                className="h-3.5 w-24 rounded"
+                style={{ background: theme.divider }}
+              />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Error State ──────────────────────────────────────────────────────────────
+
+function ErrorState({ message, onRetry, theme }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4">
+      <div
+        className="w-14 h-14 rounded-2xl flex items-center justify-center"
+        style={{ background: theme.danger + "18" }}
+      >
+        <AlertCircle size={26} color={theme.danger} />
+      </div>
+      <div className="text-center space-y-1">
+        <p
+          className="text-[15px] font-bold"
+          style={{ color: theme.textPrimary }}
+        >
+          Failed to load department
+        </p>
+        <p className="text-[13px]" style={{ color: theme.textSecondary }}>
+          {message || "Something went wrong. Please try again."}
+        </p>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onRetry}
+        className="gap-2 text-[13px] font-semibold"
         style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: "#1e293b",
-          textAlign: "right",
+          borderColor: theme.border,
+          color: theme.textPrimary,
+          background: theme.surface,
         }}
+      >
+        <RefreshCw size={14} />
+        Try Again
+      </Button>
+    </div>
+  );
+}
+
+// ─── Shared Section Card ──────────────────────────────────────────────────────
+
+function SectionCard({ title, children, theme, style = {} }) {
+  return (
+    <div
+      className="rounded-xl border"
+      style={{ background: theme.surface, borderColor: theme.border, ...style }}
+    >
+      {title && (
+        <div
+          className="px-5 pt-4 pb-3"
+          style={{ borderBottom: `1px solid ${theme.divider}` }}
+        >
+          <p
+            className="text-[11px] font-bold tracking-widest uppercase"
+            style={{ color: theme.textMuted }}
+          >
+            {title}
+          </p>
+        </div>
+      )}
+      <div className="p-5">{children}</div>
+    </div>
+  );
+}
+
+function InfoRow({ label, children, theme }) {
+  return (
+    <div
+      className="flex justify-between items-center py-2.5"
+      style={{ borderBottom: `1px solid ${theme.divider}` }}
+    >
+      <span className="text-[13px]" style={{ color: theme.textSecondary }}>
+        {label}
+      </span>
+      <span
+        className="text-[13px] font-semibold"
+        style={{ color: theme.textPrimary }}
       >
         {children}
       </span>
@@ -123,94 +235,43 @@ function InfoRow({ label, children }) {
   );
 }
 
-function Card({ children, style = {} }) {
+function StatBox({ icon, label, value, theme }) {
   return (
     <div
-      style={{
-        background: "#fff",
-        borderRadius: 14,
-        border: "1px solid #e2e8f0",
-        padding: "22px 24px",
-        ...style,
-      }}
+      className="flex items-center justify-between px-4 py-3 rounded-xl"
+      style={{ background: theme.primarySoft }}
     >
-      {children}
-    </div>
-  );
-}
-
-function CardTitle({ children }) {
-  return (
-    <p
-      style={{
-        fontSize: 11,
-        fontWeight: 700,
-        letterSpacing: "0.1em",
-        textTransform: "uppercase",
-        color: "#94a3b8",
-        margin: "0 0 18px 0",
-      }}
-    >
-      {children}
-    </p>
-  );
-}
-
-function StatBox({ icon, label, value }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "13px 16px",
-        background: "#f8fafc",
-        borderRadius: 10,
-        marginBottom: 10,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div className="flex items-center gap-3">
         <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            background: "#dcfce7",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          className="w-8 h-8 rounded-lg flex items-center justify-center"
+          style={{ background: theme.primary + "22" }}
         >
           {icon}
         </div>
-        <span style={{ fontSize: 14, color: "#475569", fontWeight: 500 }}>
+        <span
+          className="text-[13px] font-medium"
+          style={{ color: theme.textSecondary }}
+        >
           {label}
         </span>
       </div>
-      <span style={{ fontSize: 22, fontWeight: 800, color: "#1e293b" }}>
+      <span
+        className="text-xl font-extrabold"
+        style={{ color: theme.textPrimary }}
+      >
         {value}
       </span>
     </div>
   );
 }
 
-const btnStyle = (bg, color = "#fff") => ({
-  padding: "10px 24px",
-  borderRadius: 10,
-  border: "none",
-  background: bg,
-  color,
-  fontSize: 14,
-  fontWeight: 700,
-  cursor: bg === "#e2e8f0" ? "not-allowed" : "pointer",
-  fontFamily: "inherit",
-});
+// ─── TAB: Overview ────────────────────────────────────────────────────────────
 
-function OverviewTab({ department }) {
+function OverviewTab({ department, theme }) {
   const {
     hod,
     hod_id,
-    branches,
+    branches = [],
     name,
     code,
     is_active,
@@ -219,257 +280,222 @@ function OverviewTab({ department }) {
     facultyCount,
     studentCount,
   } = department;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <div
-        style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}
-      >
-        {/* Dept Info */}
-        <Card>
-          <CardTitle>Department Info</CardTitle>
-          <InfoRow label="Name">{name}</InfoRow>
-          <InfoRow label="Code">
-            <span
-              style={{
-                background: "#f1f5f9",
-                padding: "2px 10px",
-                borderRadius: 6,
-                fontFamily: "monospace",
-              }}
-            >
-              {code}
-            </span>
-          </InfoRow>
-          <InfoRow label="Status">
-            <Pill
-              label={is_active ? "Active" : "Inactive"}
-              green={is_active}
-              red={!is_active}
-            />
-          </InfoRow>
-          <InfoRow label="Created">{created_at}</InfoRow>
-          <InfoRow label="Updated">{updated_at}</InfoRow>
-        </Card>
 
-        {/* HOD */}
-        {!hod_id ? (
-          <h1>No Hod</h1>
-        ) : (
-          <Card
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              textAlign: "center",
-            }}
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Top row: 3 cards */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Dept Info */}
+        <SectionCard title="Department Info" theme={theme}>
+          <div
+            className="flex flex-col divide-y"
+            style={{ divideColor: theme.divider }}
           >
-            <CardTitle>Head of Department</CardTitle>
-            <Av name={hod.name} size={60} green />
-            <p
-              style={{
-                fontSize: 17,
-                fontWeight: 800,
-                color: "#1e293b",
-                margin: "14px 0 6px",
-              }}
-            >
-              {hod.name}
-            </p>
-            <Pill label="HOD" green />
-            <div
-              style={{
-                width: "100%",
-                marginTop: 16,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-                textAlign: "left",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Mail size={14} color="#16a34a" />
-                <span style={{ fontSize: 13, color: "#64748b" }}>
-                  {hod.email}
-                </span>
+            <InfoRow label="Name" theme={theme}>
+              {name}
+            </InfoRow>
+            <InfoRow label="Code" theme={theme}>
+              <code
+                className="px-2 py-0.5 rounded text-[12px]"
+                style={{ background: theme.primarySoft, color: theme.primary }}
+              >
+                {code}
+              </code>
+            </InfoRow>
+            <InfoRow label="Status" theme={theme}>
+              <StatusBadge active={is_active} />
+            </InfoRow>
+            <InfoRow label="Created" theme={theme}>
+              {created_at?.split("T")[0]}
+            </InfoRow>
+            <InfoRow label="Updated" theme={theme}>
+              {updated_at?.split("T")[0]}
+            </InfoRow>
+          </div>
+        </SectionCard>
+
+        {/* HOD Card */}
+        <SectionCard title="Head of Department" theme={theme}>
+          {hod_id ? (
+            <div className="flex flex-col items-center text-center gap-3">
+              <Avatar name={hod.name} size={56} color="green" />
+              <div>
+                <p
+                  className="text-[15px] font-bold"
+                  style={{ color: theme.textPrimary }}
+                >
+                  {hod.name}
+                </p>
+                <Badge className="mt-1 bg-green-100 text-green-700 border-green-200 hover:bg-green-100 text-[11px]">
+                  HOD
+                </Badge>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Briefcase size={14} color="#16a34a" />
-                <span style={{ fontSize: 13, color: "#64748b" }}>
-                  EMP ID: {hod.employee_id}
-                </span>
+              <div className="w-full space-y-2 text-left mt-1">
+                <div className="flex items-center gap-2">
+                  <Mail size={13} color={theme.primary} />
+                  <span
+                    className="text-[12px] truncate"
+                    style={{ color: theme.textSecondary }}
+                  >
+                    {hod.email}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Briefcase size={13} color={theme.primary} />
+                  <span
+                    className="text-[12px]"
+                    style={{ color: theme.textSecondary }}
+                  >
+                    EMP: {hod.employee_id}
+                  </span>
+                </div>
               </div>
             </div>
-          
-          </Card>
-        )}
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full py-6 gap-2">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center"
+                style={{ background: theme.primarySoft }}
+              >
+                <UserCheck size={20} color={theme.textMuted} />
+              </div>
+              <p
+                className="text-[13px] text-center"
+                style={{ color: theme.textMuted }}
+              >
+                No HOD assigned
+              </p>
+            </div>
+          )}
+        </SectionCard>
 
         {/* Stats */}
-        <Card>
-          <CardTitle>Department Statistics</CardTitle>
-          <StatBox
-            icon={<Building2 size={15} color="#16a34a" />}
-            label="Total Branches"
-            value={branches.length}
-          />
-          <StatBox
-            icon={<GraduationCap size={15} color="#16a34a" />}
-            label="Specializations"
-            value={branches.reduce(
-              (acc, b) => acc + b._count.specializations,
-              0,
-            )}
-          />
-          <StatBox
-            icon={<Users size={15} color="#16a34a" />}
-            label="Total Students"
-            value={studentCount}
-          />
-          <StatBox
-            icon={<UserCheck size={15} color="#16a34a" />}
-            label="Total Faculty"
-            value={facultyCount}
-          />
-        </Card>
+        <SectionCard title="Department Statistics" theme={theme}>
+          <div className="flex flex-col gap-2">
+            <StatBox
+              icon={<Building2 size={14} color={theme.primary} />}
+              label="Branches"
+              value={branches.length}
+              theme={theme}
+            />
+            <StatBox
+              icon={<GraduationCap size={14} color={theme.primary} />}
+              label="Specializations"
+              value={branches.reduce((a, b) => a + b._count.specializations, 0)}
+              theme={theme}
+            />
+            <StatBox
+              icon={<Users size={14} color={theme.primary} />}
+              label="Students"
+              value={studentCount}
+              theme={theme}
+            />
+            <StatBox
+              icon={<UserCheck size={14} color={theme.primary} />}
+              label="Faculty"
+              value={facultyCount}
+              theme={theme}
+            />
+          </div>
+        </SectionCard>
       </div>
 
-      {/* Branches */}
-      <Card>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 16,
-          }}
-        >
+      {/* Branches Table */}
+      <SectionCard title="Associated Branches" theme={theme}>
+        {branches.length === 0 ? (
           <p
-            style={{
-              fontSize: 16,
-              fontWeight: 700,
-              color: "#1e293b",
-              margin: 0,
-            }}
+            className="text-[13px] text-center py-6"
+            style={{ color: theme.textMuted }}
           >
-            Associated Branches
+            No branches found
           </p>
-          <button
-            style={{
-              fontSize: 13,
-              color: "#16a34a",
-              fontWeight: 700,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            View All
-          </button>
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow style={{ background: "#f8fafc" }}>
-              {["Branch Name", "Branch Code", "Specializations", "Status"].map(
-                (h) => (
-                  <TableHead
-                    key={h}
-                    style={{ fontSize: 13, fontWeight: 700, color: "#64748b" }}
-                  >
-                    {h}
-                  </TableHead>
-                ),
-              )}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {branches.map((b) => (
-              <TableRow key={b.id} style={{ borderColor: "#f1f5f9" }}>
-                <TableCell
-                  style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}
-                >
-                  {b.name}
-                </TableCell>
-                <TableCell>
-                  <span
-                    style={{
-                      fontSize: 13,
-                      background: "#f1f5f9",
-                      color: "#475569",
-                      padding: "3px 10px",
-                      borderRadius: 6,
-                      fontFamily: "monospace",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {b.code}
-                  </span>
-                </TableCell>
-                <TableCell
-                  style={{ fontSize: 14, color: "#475569", fontWeight: 600 }}
-                >
-                  {b._count.specializations}
-                </TableCell>
-                <TableCell>
-                  <Pill
-                    label={b.is_active ? "Active" : "Inactive"}
-                    green={b.is_active}
-                    red={!b.is_active}
-                  />
-                </TableCell>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow
+                style={{
+                  background: theme.primarySoft,
+                  borderColor: theme.border,
+                }}
+              >
+                {["Branch Name", "Code", "Specializations", "Status"].map(
+                  (h) => (
+                    <TableHead
+                      key={h}
+                      className="text-[12px] font-bold uppercase tracking-wide"
+                      style={{ color: theme.textMuted }}
+                    >
+                      {h}
+                    </TableHead>
+                  ),
+                )}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+            </TableHeader>
+            <TableBody>
+              {branches.map((b) => (
+                <TableRow key={b.id} style={{ borderColor: theme.divider }}>
+                  <TableCell
+                    className="text-[13px] font-semibold"
+                    style={{ color: theme.textPrimary }}
+                  >
+                    {b.name}
+                  </TableCell>
+                  <TableCell>
+                    <code
+                      className="text-[12px] px-2 py-0.5 rounded"
+                      style={{
+                        background: theme.primarySoft,
+                        color: theme.primary,
+                      }}
+                    >
+                      {b.code}
+                    </code>
+                  </TableCell>
+                  <TableCell
+                    className="text-[13px] font-semibold"
+                    style={{ color: theme.textSecondary }}
+                  >
+                    {b._count.specializations}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge active={b.is_active} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </SectionCard>
     </div>
   );
 }
 
 // ─── TAB: Edit ────────────────────────────────────────────────────────────────
 
-function EditTab({ department }) {
+function EditTab({ department, theme }) {
   const [name, setName] = useState(department?.name || "");
   const [code, setCode] = useState(department?.code || "");
   const [active, setActive] = useState(department?.is_active);
-
-  const queryClient = useQueryClient();
-
   const [initialData, setInitialData] = useState({
     name: department?.name,
     code: department?.code,
     active: department?.is_active,
   });
-
-  const inp = {
-    width: "100%",
-    padding: "11px 14px",
-    borderRadius: 10,
-    border: "1.5px solid #e2e8f0",
-    fontSize: 14,
-    color: "#1e293b",
-    outline: "none",
-    boxSizing: "border-box",
-    fontFamily: "inherit",
-  };
+  const queryClient = useQueryClient();
 
   const updateDepartment = async (payload) => {
     const { deptName, deptCode, deptIs_active } = payload;
     const { data } = await axios.patch(
       `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/update/info/${department.id}`,
-      {
-        name: deptName,
-        code: deptCode,
-        is_active: deptIs_active,
-      },
-      {
-        withCredentials: true,
-      },
+      { name: deptName, code: deptCode, is_active: deptIs_active },
+      { withCredentials: true },
     );
     return data.department;
   };
 
   const updateDepartmentMutation = useMutation({
     mutationFn: updateDepartment,
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success("Department updated successfully");
       queryClient.invalidateQueries(["singleDepartment"]);
       queryClient.invalidateQueries(["search-faculty"]);
@@ -489,18 +515,18 @@ function EditTab({ department }) {
     },
   });
 
-  const handleOnClickSave = () => {
-    if (name.trim() === "" || code.trim() === "") {
+  const hasChanges =
+    name !== initialData.name ||
+    code !== initialData.code ||
+    active !== initialData.active;
+
+  const handleSave = () => {
+    if (!name.trim() || !code.trim()) {
       toast.error("Department name and code cannot be empty");
       return;
     }
-
-    if (
-      name === initialData.name &&
-      code === initialData.code &&
-      active === initialData.active
-    ) {
-      toast.error("Please Update The Details Before Saving");
+    if (!hasChanges) {
+      toast.error("No changes detected");
       return;
     }
     updateDepartmentMutation.mutate({
@@ -511,99 +537,103 @@ function EditTab({ department }) {
   };
 
   return (
-    <Card style={{ maxWidth: 540 }}>
-      <CardTitle>Edit Department Details</CardTitle>
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        {[
-          ["Department Name", name, setName],
-          ["Department Code", code, setCode],
-        ].map(([label, val, set]) => (
-          <div key={label}>
-            <label
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#374151",
-                display: "block",
-                marginBottom: 7,
-              }}
-            >
-              {label}
-            </label>
-            <input
-              value={val}
-              onChange={(e) => set(e.target.value)}
-              style={inp}
-            />
-          </div>
-        ))}
-        <div>
-          <label
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: "#374151",
-              display: "block",
-              marginBottom: 8,
-            }}
-          >
-            Status
-          </label>
-          <div style={{ display: "flex", gap: 10 }}>
-            {[true, false].map((v) => (
-              <button
-                key={String(v)}
-                onClick={() => setActive(v)}
-                style={{
-                  padding: "9px 24px",
-                  borderRadius: 10,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  transition: "all 0.12s",
-                  border: `2px solid ${active === v ? "#16a34a" : "#e2e8f0"}`,
-                  background: active === v ? "#f0fdf4" : "#fff",
-                  color: active === v ? "#16a34a" : "#94a3b8",
-                }}
+    <div className="max-w-lg">
+      <SectionCard title="Edit Department Details" theme={theme}>
+        <div className="flex flex-col gap-5">
+          {[
+            { label: "Department Name", value: name, set: setName },
+            { label: "Department Code", value: code, set: setCode },
+          ].map(({ label, value, set }) => (
+            <div key={label} className="flex flex-col gap-1.5">
+              <Label
+                className="text-[13px] font-semibold"
+                style={{ color: theme.textPrimary }}
               >
-                {v ? "Active" : "Inactive"}
-              </button>
-            ))}
+                {label} <span style={{ color: theme.danger }}>*</span>
+              </Label>
+              <Input
+                value={value}
+                onChange={(e) => set(e.target.value)}
+                className="h-9 text-sm focus-visible:ring-1 focus-visible:ring-offset-0"
+                style={{
+                  background: theme.inputBg,
+                  borderColor: theme.inputBorder,
+                  color: theme.inputText,
+                }}
+              />
+            </div>
+          ))}
+
+          <div className="flex flex-col gap-2">
+            <Label
+              className="text-[13px] font-semibold"
+              style={{ color: theme.textPrimary }}
+            >
+              Status
+            </Label>
+            <div className="flex gap-2">
+              {[true, false].map((v) => {
+                const selected = active === v;
+                return (
+                  <button
+                    key={String(v)}
+                    onClick={() => setActive(v)}
+                    className="px-5 py-2 rounded-lg text-[13px] font-bold transition-all"
+                    style={{
+                      border: `2px solid ${selected ? theme.primary : theme.border}`,
+                      background: selected ? theme.primarySoft : "transparent",
+                      color: selected ? theme.primary : theme.textMuted,
+                      fontFamily: "inherit",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {v ? "Active" : "Inactive"}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {updateDepartmentMutation.isError && (
+            <Alert variant="destructive" className="py-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-[12px]">
+                {updateDepartmentMutation.error?.response?.data?.message ||
+                  "Failed to save changes."}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <Button
+            onClick={handleSave}
+            disabled={updateDepartmentMutation.isPending || !hasChanges}
+            className="h-9 text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+            style={{ background: theme.primary, color: "#fff", border: "none" }}
+          >
+            {updateDepartmentMutation.isPending ? <Spinner /> : "Save Changes"}
+          </Button>
         </div>
-        <div onClick={handleOnClickSave} style={{ paddingTop: 4 }}>
-          <button style={btnStyle("#16a34a")}>
-            {updateDepartmentMutation.isLoading ? <Spinner /> : "Save Changes"}
-          </button>
-        </div>
-      </div>
-    </Card>
+      </SectionCard>
+    </div>
   );
 }
 
 // ─── TAB: HOD Management ──────────────────────────────────────────────────────
 
-function HODTab({ department }) {
+function HODTab({ department, theme }) {
   const { hod, hod_id } = department;
-  const theme = useSelector((state) => state.theme);
-  const colors = theme[theme.currentTheme];
-
   const queryClient = useQueryClient();
   const [debounceSearch, setDebounceSearch] = useState("");
-
   const [selectedUser, setSelectedUser] = useState(null);
 
-  const searchFacultyQuery = useSearchFaculty({
-    searchQuery: debounceSearch,
-  });
+  const searchFacultyQuery = useSearchFaculty({ searchQuery: debounceSearch });
 
   useEffect(() => {
     if (searchFacultyQuery.error) {
       toast.error(
         searchFacultyQuery.error.response?.data?.message ||
           searchFacultyQuery.error.message ||
-          "Enable To Search Faculty",
+          "Unable to search faculty",
       );
     }
   }, [searchFacultyQuery.error]);
@@ -612,24 +642,17 @@ function HODTab({ department }) {
 
   const updateOrAssignHod = async (payload) => {
     const { departmentId, oldHod_id, newHod_id } = payload;
-
     const { data } = await axios.patch(
       `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/update/hod`,
-      {
-        oldHod_id: oldHod_id,
-        newHod_id: newHod_id,
-        departmentId: departmentId,
-      },
-      {
-        withCredentials: true,
-      },
+      { oldHod_id, newHod_id, departmentId },
+      { withCredentials: true },
     );
     return data;
   };
 
   const updateHodMutation = useMutation({
     mutationFn: updateOrAssignHod,
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success("HOD updated successfully");
       queryClient.invalidateQueries(["singleDepartment"]);
       queryClient.invalidateQueries(["search-faculty"]);
@@ -644,9 +667,7 @@ function HODTab({ department }) {
     },
     onError: (err) => {
       toast.error(
-        err.response?.data?.message ||
-          err.message ||
-          "Failed to update HOD. Try again.",
+        err.response?.data?.message || err.message || "Failed to update HOD.",
       );
     },
   });
@@ -656,70 +677,79 @@ function HODTab({ department }) {
       toast.error("Please select a faculty to assign as HOD");
       return;
     }
-
     if (selectedUser == hod_id) {
       toast.error("Selected faculty is already the current HOD");
       return;
     }
-
-    let oldHodId = department.hod_id;
-    if (!department.hod_id) {
-      oldHodId = false;
-    }
-    let newHodId = selectedUser;
     updateHodMutation.mutate({
       departmentId: department.id,
-      oldHod_id: oldHodId,
-      newHod_id: newHodId,
+      oldHod_id: department.hod_id || false,
+      newHod_id: selectedUser,
     });
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Card>
-        <CardTitle>Current Head of Department</CardTitle>
+    <div className="flex flex-col gap-4">
+      {/* Current HOD */}
+      <SectionCard title="Current Head of Department" theme={theme}>
         {hod_id ? (
           <div
+            className="flex items-center gap-4 p-4 rounded-xl"
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 16,
-              padding: "16px 18px",
-              background: "#f0fdf4",
-              border: "1.5px solid #bbf7d0",
-              borderRadius: 12,
+              background: theme.primarySoft,
+              border: `1.5px solid ${theme.primary}33`,
             }}
           >
-            <Av name={hod.name} size={52} green />
-            <div style={{ flex: 1 }}>
+            <Avatar name={hod.name} size={52} color="green" />
+            <div className="flex-1">
               <p
-                style={{
-                  fontSize: 16,
-                  fontWeight: 800,
-                  color: "#1e293b",
-                  margin: 0,
-                }}
+                className="text-[15px] font-bold"
+                style={{ color: theme.textPrimary }}
               >
                 {hod.name}
               </p>
-              <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0" }}>
+              <p
+                className="text-[12px] mt-0.5"
+                style={{ color: theme.textSecondary }}
+              >
                 {hod.email}
               </p>
-              <p style={{ fontSize: 13, color: "#94a3b8", margin: 0 }}>
+              <p
+                className="text-[12px] mt-0.5"
+                style={{ color: theme.textMuted }}
+              >
                 EMP ID: {hod.employee_id} · {hod.designation}
               </p>
             </div>
+            <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
+              Current HOD
+            </Badge>
           </div>
         ) : (
-          <p style={{ fontSize: 14, color: "#64748b" }}>
-            No HOD assigned to this department
-          </p>
+          <div
+            className="flex items-center gap-3 p-4 rounded-xl"
+            style={{
+              background: theme.warning + "12",
+              border: `1px solid ${theme.warning}44`,
+            }}
+          >
+            <AlertCircle size={18} color={theme.warning} />
+            <p
+              className="text-[13px] font-medium"
+              style={{ color: theme.textSecondary }}
+            >
+              No HOD assigned to this department
+            </p>
+          </div>
         )}
-      </Card>
+      </SectionCard>
 
-      <Card>
-        <CardTitle>Search Faculty And Select To Assign As HOD</CardTitle>
-        <div className="rounded-lg border w-full overflow-hidden">
+      {/* Search & Assign */}
+      <SectionCard title="Search Faculty to Assign as HOD" theme={theme}>
+        <div
+          className="rounded-lg border overflow-hidden"
+          style={{ borderColor: theme.border }}
+        >
           <SearchBar
             searching={searchFacultyQuery.isLoading}
             debounceSearch={debounceSearch}
@@ -739,114 +769,128 @@ function HODTab({ department }) {
             setSelectedId={setSelectedUser}
           />
         </div>
-      </Card>
-      <Button
-        style={{ background: colors.primaryHover, color: colors.sidebarText }}
-        className="cursor-pointer"
-        onClick={handleUpdateHod}
-        disabled={
-          !selectedUser ||
-          selectedUser.id === hod_id ||
-          updateHodMutation.isPending
-        }
-      >
-        {updateHodMutation.isPending ? <Spinner /> : "Assign as HOD"}
-      </Button>
+
+        {updateHodMutation.isError && (
+          <Alert variant="destructive" className="mt-3 py-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-[12px]">
+              {updateHodMutation.error?.response?.data?.message ||
+                "Failed to assign HOD."}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="mt-4">
+          <Button
+            onClick={handleUpdateHod}
+            disabled={
+              !selectedUser ||
+              selectedUser == hod_id ||
+              updateHodMutation.isPending
+            }
+            className="h-9 text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+            style={{ background: theme.primary, color: "#fff", border: "none" }}
+          >
+            {updateHodMutation.isPending ? <Spinner /> : "Assign as HOD"}
+          </Button>
+        </div>
+      </SectionCard>
     </div>
   );
 }
 
 // ─── TAB: Branches ────────────────────────────────────────────────────────────
 
-function BranchesTab({ department }) {
+function BranchesTab({ department, theme }) {
+  const branches = department?.branches ?? [];
   return (
-    <Card>
-      <CardTitle>All Branches</CardTitle>
-      <Table>
-        <TableHeader>
-          <TableRow style={{ background: "#f8fafc" }}>
-            {["Branch Name", "Code", "Specializations", "Status"].map((h) => (
-              <TableHead
-                key={h}
-                style={{ fontSize: 13, fontWeight: 700, color: "#64748b" }}
-              >
-                {h}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {department?.branches?.map((b) => (
-            <TableRow key={b.id} style={{ borderColor: "#f1f5f9" }}>
-              <TableCell
-                style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}
-              >
-                {b?.name}
-              </TableCell>
-              <TableCell>
-                <span
-                  style={{
-                    fontSize: 13,
-                    background: "#f1f5f9",
-                    color: "#475569",
-                    padding: "3px 10px",
-                    borderRadius: 6,
-                    fontFamily: "monospace",
-                    fontWeight: 700,
-                  }}
+    <SectionCard title="All Branches" theme={theme}>
+      {branches.length === 0 ? (
+        <div className="flex flex-col items-center py-10 gap-2">
+          <BookOpen size={28} color={theme.textMuted} />
+          <p className="text-[13px]" style={{ color: theme.textMuted }}>
+            No branches found for this department
+          </p>
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow
+              style={{
+                background: theme.primarySoft,
+                borderColor: theme.border,
+              }}
+            >
+              {["Branch Name", "Code", "Specializations", "Status"].map((h) => (
+                <TableHead
+                  key={h}
+                  className="text-[12px] font-bold uppercase tracking-wide"
+                  style={{ color: theme.textMuted }}
                 >
-                  {b?.code}
-                </span>
-              </TableCell>
-              <TableCell
-                style={{ fontSize: 14, color: "#475569", fontWeight: 600 }}
-              >
-                {b?._count?.specializations}
-              </TableCell>
-              <TableCell>
-                <Pill
-                  label={b.is_active ? "Active" : "Inactive"}
-                  green={b.is_active}
-                  red={!b.is_active}
-                />
-              </TableCell>
+                  {h}
+                </TableHead>
+              ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+          </TableHeader>
+          <TableBody>
+            {branches.map((b) => (
+              <TableRow key={b.id} style={{ borderColor: theme.divider }}>
+                <TableCell
+                  className="text-[13px] font-semibold"
+                  style={{ color: theme.textPrimary }}
+                >
+                  {b?.name}
+                </TableCell>
+                <TableCell>
+                  <code
+                    className="text-[12px] px-2 py-0.5 rounded"
+                    style={{
+                      background: theme.primarySoft,
+                      color: theme.primary,
+                    }}
+                  >
+                    {b?.code}
+                  </code>
+                </TableCell>
+                <TableCell
+                  className="text-[13px] font-semibold"
+                  style={{ color: theme.textSecondary }}
+                >
+                  {b?._count?.specializations}
+                </TableCell>
+                <TableCell>
+                  <StatusBadge active={b.is_active} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </SectionCard>
   );
 }
+
+// ─── TABS CONFIG ──────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: "overview", label: "Overview", icon: Building2 },
   { id: "edit", label: "Edit Department", icon: ScrollText },
   { id: "hod", label: "HOD Management", icon: UserCheck },
   { id: "branches", label: "Branches", icon: BookOpen },
-  // { id: "users", label: "Users", icon: Users },
-  // { id: "coordinators", label: "Coordinators", icon: GraduationCap },
-  // { id: "logs", label: "Activity Log", icon: CalendarDays },
 ];
 
-export default function DepartmentModal({
-  open,
-  onClose,
-  currentSelectedId,
-  setCurrentSelectedId,
-}) {
+// ─── Main Modal ───────────────────────────────────────────────────────────────
+
+export default function DepartmentModal({ open, onClose, currentSelectedId }) {
+  const currentTheme = useSelector((s) => s.theme.currentTheme);
+  const theme = useSelector((s) => s.theme[currentTheme]);
   const [activeTab, setActiveTab] = useState("overview");
 
-  console.log({ currentSelectedId });
-
-  const fetchDepartmentDetailsOnId = async (payload) => {
-    const { id } = payload;
+  const fetchDepartmentDetailsOnId = async ({ id }) => {
     const { data } = await axios.get(
       `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/single-department/info/${id}`,
-      {
-        withCredentials: true,
-      },
+      { withCredentials: true },
     );
-
     return data.department;
   };
 
@@ -863,128 +907,123 @@ export default function DepartmentModal({
       toast.error(
         singleDepartmentQuery.error?.response?.data?.message ||
           singleDepartmentQuery.error?.message ||
-          "Failed to fetch department details. Please try again.",
+          "Failed to fetch department details.",
       );
     }
   }, [singleDepartmentQuery.error]);
 
-  console.log(departmentData);
+  const handleOpenChange = (v) => {
+    if (!v) {
+      onClose?.();
+    }
+  };
 
   return (
-    <>
-      <Dialog
-        open={open}
-        onOpenChange={() => {
-          onClose && onClose();
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="flex flex-col gap-0 p-0 overflow-hidden"
+        style={{
+          maxWidth: 960,
+          width: "calc(100vw - 32px)",
+          maxHeight: "92vh",
+          background: theme.background,
+          borderColor: theme.border,
+          borderRadius: 18,
+          boxShadow: `0 32px 80px ${theme.shadow}`,
         }}
       >
-        <DialogContent
-          style={{
-            background: "#f8fafc",
-            borderRadius: 18,
-            maxWidth: 940,
-            width: "96vw",
-            maxHeight: "92vh",
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            padding: 0,
-            boxShadow: "0 32px 80px rgba(0,0,0,0.18)",
-            border: "1px solid #e2e8f0",
-            gap: 0,
-          }}
-        >
-          {singleDepartmentQuery.isLoading ? (
-            <div>loading</div>
-          ) : (
+        {/* ── Loading State ── */}
+        {singleDepartmentQuery.isLoading && (
+          <>
+            <HeaderSkeleton theme={theme} />
+            <div className="flex-1 overflow-y-auto p-7">
+              <OverviewSkeleton theme={theme} />
+            </div>
+          </>
+        )}
+
+        {/* ── Error State ── */}
+        {singleDepartmentQuery.isError && !singleDepartmentQuery.isLoading && (
+          <div className="flex-1 flex items-center justify-center px-7">
+            <ErrorState
+              message={
+                singleDepartmentQuery.error?.response?.data?.message ||
+                singleDepartmentQuery.error?.message
+              }
+              onRetry={() => singleDepartmentQuery.refetch()}
+              theme={theme}
+            />
+          </div>
+        )}
+
+        {/* ── Loaded State ── */}
+        {!singleDepartmentQuery.isLoading &&
+          !singleDepartmentQuery.isError &&
+          departmentData && (
             <>
+              {/* Header */}
               <div
+                className="shrink-0 px-7 pt-6 pb-0"
                 style={{
-                  background: "#fff",
-                  padding: "24px 28px 0",
-                  borderBottom: "1px solid #e2e8f0",
+                  background: theme.surface,
+                  borderBottom: `1px solid ${theme.divider}`,
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 16,
-                    marginBottom: 22,
-                  }}
-                >
+                <div className="flex items-start gap-4 mb-5">
                   <div
-                    style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: 14,
-                      background: "#dcfce7",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                    style={{ background: theme.primarySoft }}
                   >
-                    <Building2 size={26} color="#16a34a" />
+                    <Building2 size={26} color={theme.primary} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <DialogTitle>{departmentData?.name}</DialogTitle>
-                      <Pill
-                        label={
-                          departmentData?.is_active ? "Active" : "Inactive"
-                        }
-                        green={departmentData?.is_active}
-                        red={departmentData && !departmentData.is_active}
-                      />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <DialogTitle
+                        className="text-[20px] font-bold leading-tight"
+                        style={{ color: theme.textPrimary }}
+                      >
+                        {departmentData.name}
+                      </DialogTitle>
+                      <StatusBadge active={departmentData.is_active} />
                     </div>
                     <p
-                      style={{
-                        fontSize: 13,
-                        color: "#94a3b8",
-                        margin: "5px 0 0",
-                      }}
+                      className="text-[13px] mt-1"
+                      style={{ color: theme.textMuted }}
                     >
                       Code:{" "}
-                      <strong style={{ color: "#64748b" }}>
-                        {departmentData?.code}
-                      </strong>
-                      &nbsp;·&nbsp; Created:{" "}
-                      {departmentData?.created_at?.split("T")[0]} &nbsp;·&nbsp;
-                      Updated: {departmentData?.updated_at?.split("T")[0]}
+                      <code
+                        className="px-1.5 py-0.5 rounded text-[12px]"
+                        style={{
+                          background: theme.primarySoft,
+                          color: theme.primary,
+                        }}
+                      >
+                        {departmentData.code}
+                      </code>
+                      &nbsp;·&nbsp;Created:{" "}
+                      {departmentData.created_at?.split("T")[0]}
+                      &nbsp;·&nbsp;Updated:{" "}
+                      {departmentData.updated_at?.split("T")[0]}
                     </p>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
+                {/* Tabs */}
+                <div className="flex gap-0 overflow-x-auto">
                   {TABS.map(({ id, label, icon: Icon }) => {
-                    const active = activeTab === id;
+                    const isActive = activeTab === id;
                     return (
                       <button
                         key={id}
                         onClick={() => setActiveTab(id)}
+                        className="flex items-center gap-2 px-4 py-3 text-[13px] font-semibold whitespace-nowrap transition-all"
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 7,
-                          padding: "11px 16px",
-                          fontSize: 13,
-                          fontWeight: active ? 700 : 500,
-                          color: active ? "#16a34a" : "#94a3b8",
+                          color: isActive ? theme.primary : theme.textMuted,
                           background: "none",
                           border: "none",
+                          borderBottom: `2.5px solid ${isActive ? theme.primary : "transparent"}`,
                           cursor: "pointer",
-                          borderBottom: `2.5px solid ${active ? "#16a34a" : "transparent"}`,
-                          whiteSpace: "nowrap",
                           fontFamily: "inherit",
-                          transition: "all 0.12s",
                         }}
                       >
                         <Icon size={14} />
@@ -995,28 +1034,27 @@ export default function DepartmentModal({
                 </div>
               </div>
 
+              {/* Tab Content */}
               <div
-                style={{
-                  overflowY: "auto",
-                  flex: 1,
-                  padding: "24px 28px 32px",
-                }}
+                className="flex-1 overflow-y-auto"
+                style={{ padding: "24px 28px 32px" }}
               >
                 {activeTab === "overview" && (
-                  <OverviewTab department={departmentData} />
+                  <OverviewTab department={departmentData} theme={theme} />
                 )}
                 {activeTab === "edit" && (
-                  <EditTab department={departmentData} activeTab={activeTab} />
+                  <EditTab department={departmentData} theme={theme} />
                 )}
-                {activeTab === "hod" && <HODTab department={departmentData} />}
+                {activeTab === "hod" && (
+                  <HODTab department={departmentData} theme={theme} />
+                )}
                 {activeTab === "branches" && (
-                  <BranchesTab department={departmentData} />
+                  <BranchesTab department={departmentData} theme={theme} />
                 )}
               </div>
             </>
           )}
-        </DialogContent>
-      </Dialog>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }
