@@ -19,7 +19,6 @@ model Department {
   user                   User[]                   @relation("DepartmentUsers")
   coordinatorAssignments CoordinatorAssignments[]
 
-  @@unique([name, code, hod_id])
   @@index([hod_id])
 }
 
@@ -98,6 +97,10 @@ model UserRoles {
   granted_by String?
   grantedBy  User?    @relation("GrantedBy", fields: [granted_by], references: [id])
   granted_at DateTime @default(now())
+
+  @@index([role])
+  @@unique([user_id, role])
+  @@index([user_id, role])
 }
 
 model AcademicCycles {

@@ -6,7 +6,9 @@ import {
   getCountOfActiveDepartments,
   getCountOfDepartmentsActiveAndInactiveAndTotalAndWithHods,
   getDepatmentsWhichDontHaveHod,
+  getSingleDepartment,
   searchDepartments,
+  updateDepartment,
 } from "../controllers/department.controler.js";
 import { adminMiddleware } from "../middlewares/admin.middelwares.js";
 import { authMiddleware } from "../middlewares/auth.middelware.js";
@@ -55,6 +57,18 @@ departmentRouter.get(
   authMiddleware,
   adminMiddleware,
   searchDepartments,
+);
+departmentRouter.get(
+  "/single-department/info/:id",
+  authMiddleware,
+  adminMiddleware,
+  getSingleDepartment,
+);
+departmentRouter.patch(
+  "/update/info/:id",
+  authMiddleware,
+  adminMiddleware,
+  updateDepartment,
 );
 
 export default departmentRouter;

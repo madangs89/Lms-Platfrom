@@ -125,6 +125,7 @@ export const getAllActiveDepartments = async (req, res) => {
   }
 };
 
+// This is for table
 export const getAllDepartmentsWithHodsAndStudentsCountAndBranchCount = async (
   req,
   res,
@@ -235,6 +236,7 @@ export const getAllDepartmentsWithHodsAndStudentsCountAndBranchCount = async (
   }
 };
 
+// This is used in department page
 export const getCountOfDepartmentsActiveAndInactiveAndTotalAndWithHods = async (
   req,
   res,
@@ -324,6 +326,7 @@ export const getCountOfActiveDepartments = async (req, res) => {
   }
 };
 
+// This is used in department details page for modal
 export const getSingleDepartment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -333,59 +336,90 @@ export const getSingleDepartment = async (req, res) => {
         success: false,
       });
     }
-    const department = await prisma.department.findUnique({
-      where: { id },
-    });
 
-    if (!department) {
-      return res.status(404).json({
-        message: "Department not found",
-        success: false,
-      });
-    }
+    const [department, facultyCount, studentCount] = await Promise.all([
+      prisma.department.findUnique({
+        where: { id },
+
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          is_active: true,
+          hod_id: true,
+          created_at: true,
+          updated_at: true,
+
+          hod: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              employee_id: true,
+
+              roles: {
+                select: {
+                  role: true,
+                },
+              },
+            },
+          },
+
+          branches: {
+            select: {
+              id: true,
+              name: true,
+              department_id: true,
+              is_active: true,
+              code: true,
+
+              _count: {
+                select: {
+                  specializations: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+
+      prisma.user.count({
+        where: {
+          department_id: id,
+
+          roles: {
+            some: {
+              role: "faculty",
+            },
+          },
+        },
+      }),
+
+      prisma.user.count({
+        where: {
+          department_id: id,
+
+          roles: {
+            some: {
+              role: "student",
+            },
+          },
+        },
+      }),
+    ]);
+
     return res.status(200).json({
-      department,
+      department: {
+        ...department,
+        facultyCount,
+        studentCount,
+      },
       success: true,
       message: "Department retrieved successfully",
     });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Internal server error", success: false });
-  }
-};
+    console.log(error);
 
-export const toggleActive = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({
-        message: "Department ID is required",
-        success: false,
-      });
-    }
-    const department = await prisma.department.findUnique({
-      where: { id },
-    });
-
-    if (!department) {
-      return res.status(404).json({
-        message: "Department not found",
-        success: false,
-      });
-    }
-
-    const updatedDepartment = await prisma.department.update({
-      where: { id },
-      data: { is_active: !department.is_active },
-    });
-
-    return res.status(200).json({
-      department: updatedDepartment,
-      success: true,
-      message: `Department active status toggled successfully. Toggled To ${updatedDepartment.is_active ? "Active" : "Inactive"}`,
-    });
-  } catch (error) {
     return res
       .status(500)
       .json({ message: "Internal server error", success: false });
@@ -393,7 +427,6 @@ export const toggleActive = async (req, res) => {
 };
 
 // Searching departments by name or code
-
 export const searchDepartments = async (req, res) => {
   try {
     const { query } = req.params;
@@ -497,6 +530,368 @@ export const searchDepartments = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", success: false });
+  }
+};
+
+export const updateDepartment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, code, is_active } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        message: "Department ID is required",
+        success: false,
+      });
+    }
+
+    const updatedDepartment = await prisma.department.update({
+      where: { id },
+      data: { name, code, is_active },
+    });
+
+    return res.status(200).json({
+      department: updatedDepartment,
+      success: true,
+      message: "Department updated successfully",
+    });
+  } catch (error) {
+    console.log(error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        const fields = error.meta?.target || [];
+
+        let message = "Duplicate value";
+        if (fields.includes("name")) {
+          message = "Department name already exists";
+        } else if (fields.includes("code")) {
+          message = "Department code already exists";
+        }
+        return res.status(400).json({
+          message,
+          success: false,
+        });
+      } else if (error.code === "P2003") {
+        return res.status(400).json({
+          message: "Invalid foreign key value: " + error.meta.field_name,
+          success: false,
+        });
+      } else if (error.code === "P2025") {
+        return res.status(404).json({
+          message: "Department not found",
+          success: false,
+        });
+      }
+    }
+    return res
+      .status(500)
+      .json({ message: "Internal server error", success: false });
+  }
+};
+
+export const assignOrChangeHod = async (req, res) => {
+  try {
+    const { departmentId, oldHod_id, newHod_id } = req.body;
+
+    // ─────────────────────────────────────
+    // Validation
+    // ─────────────────────────────────────
+
+    if (!departmentId) {
+      return res.status(400).json({
+        message: "Department ID is required",
+        success: false,
+      });
+    }
+
+    if (!newHod_id) {
+      return res.status(400).json({
+        message: "New HOD ID is required",
+        success: false,
+      });
+    }
+
+    if (!req.user?.id) {
+      return res.status(401).json({
+        message: "Unauthorized",
+        success: false,
+      });
+    }
+
+    // Prevent same HOD replacement
+    if (oldHod_id && oldHod_id === newHod_id) {
+      return res.status(400).json({
+        message: "Old HOD and New HOD cannot be same",
+        success: false,
+      });
+    }
+
+    // ─────────────────────────────────────
+    // Check Department Exists
+    // ─────────────────────────────────────
+
+    const department = await prisma.department.findUnique({
+      where: { id: departmentId },
+
+      select: {
+        id: true,
+        hod_id: true,
+      },
+    });
+
+    if (!department) {
+      return res.status(404).json({
+        message: "Department not found",
+        success: false,
+      });
+    }
+
+    // ─────────────────────────────────────
+    // Check New HOD Exists
+    // ─────────────────────────────────────
+
+    const newHodUser = await prisma.user.findUnique({
+      where: { id: newHod_id },
+
+      select: {
+        id: true,
+      },
+    });
+
+    if (!newHodUser) {
+      return res.status(404).json({
+        message: "New HOD user not found",
+        success: false,
+      });
+    }
+
+    // ─────────────────────────────────────
+    // Check already HOD elsewhere
+    // ─────────────────────────────────────
+
+    const alreadyHod = await prisma.department.findFirst({
+      where: {
+        hod_id: newHod_id,
+        NOT: {
+          id: departmentId,
+        },
+      },
+
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (alreadyHod) {
+      return res.status(400).json({
+        message: `User is already HOD of ${alreadyHod.name}`,
+        success: false,
+      });
+    }
+
+    // ─────────────────────────────────────
+    // ASSIGN NEW HOD
+    // ─────────────────────────────────────
+
+    if (!oldHod_id) {
+      // Department already has HOD
+      if (department.hod_id) {
+        return res.status(400).json({
+          message:
+            "Department already has a HOD assigned. Use change HOD instead.",
+          success: false,
+        });
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        // Update department
+        const updatedDepartment = await tx.department.update({
+          where: {
+            id: departmentId,
+          },
+
+          data: {
+            hod_id: newHod_id,
+          },
+        });
+
+        // Check role already exists
+        const existingHodRole = await tx.userRoles.findFirst({
+          where: {
+            user_id: newHod_id,
+            role: "hod",
+          },
+        });
+
+        // Create only if not exists
+        if (!existingHodRole) {
+          await tx.userRoles.create({
+            data: {
+              user_id: newHod_id,
+              role: "hod",
+              granted_by: req.user.id,
+            },
+          });
+        }
+
+        return updatedDepartment;
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "HOD assigned successfully",
+        department: result,
+      });
+    }
+
+    // ─────────────────────────────────────
+    // CHANGE EXISTING HOD
+    // ─────────────────────────────────────
+
+    // Validate old HOD exists
+    const oldHodUser = await prisma.user.findUnique({
+      where: {
+        id: oldHod_id,
+      },
+
+      select: {
+        id: true,
+      },
+    });
+
+    if (!oldHodUser) {
+      return res.status(404).json({
+        message: "Old HOD user not found",
+        success: false,
+      });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Update department
+      const updatedDepartment = await tx.department.update({
+        where: {
+          id: departmentId,
+        },
+
+        data: {
+          hod_id: newHod_id,
+        },
+      });
+
+      // Remove old HOD role
+      await tx.userRoles.deleteMany({
+        where: {
+          user_id: oldHod_id,
+          role: "hod",
+        },
+      });
+
+      // Check if new HOD role exists
+      const existingHodRole = await tx.userRoles.findFirst({
+        where: {
+          user_id: newHod_id,
+          role: "hod",
+        },
+      });
+
+      // Create role only if not exists
+      if (!existingHodRole) {
+        await tx.userRoles.create({
+          data: {
+            user_id: newHod_id,
+            role: "hod",
+            granted_by: req.user.id,
+          },
+        });
+      }
+
+      return updatedDepartment;
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "HOD changed successfully",
+      department: result,
+    });
+  } catch (error) {
+    console.log(error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // Unique constraint
+      if (error.code === "P2002") {
+        return res.status(400).json({
+          message: "Duplicate value found",
+          success: false,
+        });
+      }
+
+      // Foreign key constraint
+      if (error.code === "P2003") {
+        return res.status(400).json({
+          message: "Invalid foreign key reference",
+          success: false,
+        });
+      }
+
+      // Record not found
+      if (error.code === "P2025") {
+        return res.status(404).json({
+          message: "Record not found",
+          success: false,
+        });
+      }
+
+      // Transaction conflict
+      if (error.code === "P2034") {
+        return res.status(400).json({
+          message: "Transaction failed due to concurrent update",
+          success: false,
+        });
+      }
+    }
+
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+export const toggleActive = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({
+        message: "Department ID is required",
+        success: false,
+      });
+    }
+    const department = await prisma.department.findUnique({
+      where: { id },
+    });
+
+    if (!department) {
+      return res.status(404).json({
+        message: "Department not found",
+        success: false,
+      });
+    }
+
+    const updatedDepartment = await prisma.department.update({
+      where: { id },
+      data: { is_active: !department.is_active },
+    });
+
+    return res.status(200).json({
+      department: updatedDepartment,
+      success: true,
+      message: `Department active status toggled successfully. Toggled To ${updatedDepartment.is_active ? "Active" : "Inactive"}`,
+    });
+  } catch (error) {
     return res
       .status(500)
       .json({ message: "Internal server error", success: false });

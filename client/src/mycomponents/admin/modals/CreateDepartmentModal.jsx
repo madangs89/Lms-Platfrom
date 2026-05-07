@@ -27,12 +27,9 @@ import { userColumns, userTemplate } from "@/configs/template";
 import SearchBar from "../SearchBar";
 import toast from "react-hot-toast";
 import { Spinner } from "@/components/ui/spinner";
+import { useSearchFaculty } from "@/hooks/useSearchFaculty";
 
-export default function CreateDepartmentModal({
-  onClose,
-  open,
-  mutationLoading,
-}) {
+export default function CreateDepartmentModal({ onClose, open }) {
   const currentTheme = useSelector((s) => s.theme.currentTheme);
   const theme = useSelector((s) => s.theme[currentTheme]);
   const queryClient = useQueryClient();
@@ -42,19 +39,8 @@ export default function CreateDepartmentModal({
   const [status, setStatus] = useState("active");
   const [selectedUser, setSelectedUser] = useState(null);
 
-  const searchFacultyQuery = useQuery({
-    queryKey: ["search-faculty", debounceSearch],
-    queryFn: async () => {
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/search/faculty-only/${debounceSearch}`,
-        { withCredentials: true },
-      );
-      return data.faculty ?? [];
-    },
-    enabled: !!debounceSearch.trim(),
-    refetchOnWindowFocus: false,
-    retry: 3,
-    retryDelay: 1000,
+  const searchFacultyQuery = useSearchFaculty({
+    searchQuery: debounceSearch,
   });
 
   useEffect(() => {

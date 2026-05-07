@@ -13,7 +13,7 @@ app.use(
     origin: `${process.env.CLIENT_URL}`,
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS" , "PATCH"],
   }),
 );
 app.use(express.json());

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -25,6 +25,14 @@ import {
   ChevronRight,
   Clock,
 } from "lucide-react";
+import axios from "axios";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { Spinner } from "@/components/ui/spinner";
+import { useSearchFaculty } from "@/hooks/useSearchFaculty";
+import SearchBar from "../SearchBar";
+import TableTemplate from "../TableTemplate";
+import { userColumns, userTemplate } from "@/configs/template";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -706,17 +714,19 @@ const outlineBtn = {
 
 // ─── TAB: Overview ────────────────────────────────────────────────────────────
 
-function OverviewTab({ onChangeHOD }) {
+function OverviewTab({ onChangeHOD, department }) {
   const {
-    stats,
     hod,
+    hod_id,
     branches,
     name,
     code,
     is_active,
     created_at,
     updated_at,
-  } = DEPT;
+    facultyCount,
+    studentCount,
+  } = department;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <div
@@ -745,74 +755,78 @@ function OverviewTab({ onChangeHOD }) {
               red={!is_active}
             />
           </InfoRow>
-          <InfoRow label="Created">Jan 15, 2023</InfoRow>
-          <InfoRow label="Updated">May 20, 2024</InfoRow>
+          <InfoRow label="Created">{created_at}</InfoRow>
+          <InfoRow label="Updated">{updated_at}</InfoRow>
         </Card>
 
         {/* HOD */}
-        <Card
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            textAlign: "center",
-          }}
-        >
-          <CardTitle>Head of Department</CardTitle>
-          <Av name={hod.name} size={60} green />
-          <p
+        {!hod_id ? (
+          <h1>No Hod</h1>
+        ) : (
+          <Card
             style={{
-              fontSize: 17,
-              fontWeight: 800,
-              color: "#1e293b",
-              margin: "14px 0 6px",
-            }}
-          >
-            {hod.name}
-          </p>
-          <Pill label="HOD" green />
-          <div
-            style={{
-              width: "100%",
-              marginTop: 16,
               display: "flex",
               flexDirection: "column",
-              gap: 8,
-              textAlign: "left",
+              alignItems: "center",
+              textAlign: "center",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Mail size={14} color="#16a34a" />
-              <span style={{ fontSize: 13, color: "#64748b" }}>
-                {hod.email}
-              </span>
+            <CardTitle>Head of Department</CardTitle>
+            <Av name={hod.name} size={60} green />
+            <p
+              style={{
+                fontSize: 17,
+                fontWeight: 800,
+                color: "#1e293b",
+                margin: "14px 0 6px",
+              }}
+            >
+              {hod.name}
+            </p>
+            <Pill label="HOD" green />
+            <div
+              style={{
+                width: "100%",
+                marginTop: 16,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+                textAlign: "left",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Mail size={14} color="#16a34a" />
+                <span style={{ fontSize: 13, color: "#64748b" }}>
+                  {hod.email}
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Briefcase size={14} color="#16a34a" />
+                <span style={{ fontSize: 13, color: "#64748b" }}>
+                  EMP ID: {hod.employee_id}
+                </span>
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Briefcase size={14} color="#16a34a" />
-              <span style={{ fontSize: 13, color: "#64748b" }}>
-                EMP ID: {hod.employee_id}
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={onChangeHOD}
-            style={{
-              marginTop: 18,
-              width: "100%",
-              padding: "10px 0",
-              border: "1.5px solid #16a34a",
-              borderRadius: 10,
-              background: "#fff",
-              color: "#16a34a",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            Change HOD
-          </button>
-        </Card>
+            <button
+              onClick={onChangeHOD}
+              style={{
+                marginTop: 18,
+                width: "100%",
+                padding: "10px 0",
+                border: "1.5px solid #16a34a",
+                borderRadius: 10,
+                background: "#fff",
+                color: "#16a34a",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Change HOD
+            </button>
+          </Card>
+        )}
 
         {/* Stats */}
         <Card>
@@ -820,22 +834,25 @@ function OverviewTab({ onChangeHOD }) {
           <StatBox
             icon={<Building2 size={15} color="#16a34a" />}
             label="Total Branches"
-            value={stats.totalBranches}
+            value={branches.length}
           />
           <StatBox
             icon={<GraduationCap size={15} color="#16a34a" />}
             label="Specializations"
-            value={stats.totalSpecializations}
+            value={branches.reduce(
+              (acc, b) => acc + b._count.specializations,
+              0,
+            )}
           />
           <StatBox
             icon={<Users size={15} color="#16a34a" />}
-            label="Total Users"
-            value={stats.totalUsers}
+            label="Total Students"
+            value={studentCount}
           />
           <StatBox
             icon={<UserCheck size={15} color="#16a34a" />}
-            label="Coordinators"
-            value={stats.totalCoordinators}
+            label="Total Faculty"
+            value={facultyCount}
           />
         </Card>
       </div>
@@ -914,7 +931,7 @@ function OverviewTab({ onChangeHOD }) {
                 <TableCell
                   style={{ fontSize: 14, color: "#475569", fontWeight: 600 }}
                 >
-                  {b.specCount}
+                  {b._count.specializations}
                 </TableCell>
                 <TableCell>
                   <Pill
@@ -934,10 +951,18 @@ function OverviewTab({ onChangeHOD }) {
 
 // ─── TAB: Edit ────────────────────────────────────────────────────────────────
 
-function EditTab() {
-  const [name, setName] = useState(DEPT.name);
-  const [code, setCode] = useState(DEPT.code);
-  const [active, setActive] = useState(DEPT.is_active);
+function EditTab({ department }) {
+  const [name, setName] = useState(department?.name || "");
+  const [code, setCode] = useState(department?.code || "");
+  const [active, setActive] = useState(department?.is_active);
+
+  const queryClient = useQueryClient();
+
+  const [initialData, setInitialData] = useState({
+    name: department?.name,
+    code: department?.code,
+    active: department?.is_active,
+  });
 
   const inp = {
     width: "100%",
@@ -949,6 +974,65 @@ function EditTab() {
     outline: "none",
     boxSizing: "border-box",
     fontFamily: "inherit",
+  };
+
+  const updateDepartment = async (payload) => {
+    const { deptName, deptCode, deptIs_active } = payload;
+    const { data } = await axios.patch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/update/info/${department.id}`,
+      {
+        name: deptName,
+        code: deptCode,
+        is_active: deptIs_active,
+      },
+      {
+        withCredentials: true,
+      },
+    );
+    return data.department;
+  };
+
+  const updateDepartmentMutation = useMutation({
+    mutationFn: updateDepartment,
+    onSuccess: (data) => {
+      toast.success("Department updated successfully");
+      queryClient.invalidateQueries(["singleDepartment"]);
+      queryClient.invalidateQueries(["search-faculty"]);
+      queryClient.invalidateQueries(["departments-count"]);
+      queryClient.invalidateQueries(["departments-for-table"]);
+      queryClient.invalidateQueries(["users"]);
+      queryClient.invalidateQueries(["userCounts"]);
+      queryClient.invalidateQueries(["available-hod-departments"]);
+      queryClient.invalidateQueries(["search_departments"]);
+      setInitialData({ name, code, active });
+    },
+    onError: (err) => {
+      toast.error(
+        err.response?.data?.message ||
+          "Failed to update department. Try again.",
+      );
+    },
+  });
+
+  const handleOnClickSave = () => {
+    if (name.trim() === "" || code.trim() === "") {
+      toast.error("Department name and code cannot be empty");
+      return;
+    }
+
+    if (
+      name === initialData.name &&
+      code === initialData.code &&
+      active === initialData.active
+    ) {
+      toast.error("Please Update The Details Before Saving");
+      return;
+    }
+    updateDepartmentMutation.mutate({
+      deptName: name,
+      deptCode: code,
+      deptIs_active: active,
+    });
   };
 
   return (
@@ -1013,8 +1097,10 @@ function EditTab() {
             ))}
           </div>
         </div>
-        <div style={{ paddingTop: 4 }}>
-          <button style={btnStyle("#16a34a")}>Save Changes</button>
+        <div onClick={handleOnClickSave} style={{ paddingTop: 4 }}>
+          <button style={btnStyle("#16a34a")}>
+            {updateDepartmentMutation.isLoading ? <Spinner /> : "Save Changes"}
+          </button>
         </div>
       </div>
     </Card>
@@ -1023,98 +1109,92 @@ function EditTab() {
 
 // ─── TAB: HOD Management ──────────────────────────────────────────────────────
 
-function HODTab({ onChangeHOD }) {
-  const { hod } = DEPT;
+function HODTab({ onChangeHOD, department }) {
+  const { hod, hod_id } = department;
+
+  const [debounceSearch, setDebounceSearch] = useState("");
+
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  const searchFacultyQuery = useSearchFaculty({
+    searchQuery: debounceSearch,
+  });
+
+  useEffect(() => {
+    if (searchFacultyQuery.error) {
+      toast.error(
+        searchFacultyQuery.error.response?.data?.message ||
+          searchFacultyQuery.error.message ||
+          "Enable To Search Faculty",
+      );
+    }
+  }, [searchFacultyQuery.error]);
+
+  const facultyData = searchFacultyQuery.data ?? [];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card>
         <CardTitle>Current Head of Department</CardTitle>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            padding: "16px 18px",
-            background: "#f0fdf4",
-            border: "1.5px solid #bbf7d0",
-            borderRadius: 12,
-          }}
-        >
-          <Av name={hod.name} size={52} green />
-          <div style={{ flex: 1 }}>
-            <p
-              style={{
-                fontSize: 16,
-                fontWeight: 800,
-                color: "#1e293b",
-                margin: 0,
-              }}
-            >
-              {hod.name}
-            </p>
-            <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0" }}>
-              {hod.email}
-            </p>
-            <p style={{ fontSize: 13, color: "#94a3b8", margin: 0 }}>
-              EMP ID: {hod.employee_id} · {hod.designation}
-            </p>
-          </div>
-          <button
-            onClick={onChangeHOD}
+        {hod_id ? (
+          <div
             style={{
-              padding: "10px 20px",
-              borderRadius: 10,
-              border: "1.5px solid #16a34a",
-              background: "#fff",
-              color: "#16a34a",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: "inherit",
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              padding: "16px 18px",
+              background: "#f0fdf4",
+              border: "1.5px solid #bbf7d0",
+              borderRadius: 12,
             }}
           >
-            Change HOD
-          </button>
-        </div>
+            <Av name={hod.name} size={52} green />
+            <div style={{ flex: 1 }}>
+              <p
+                style={{
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: "#1e293b",
+                  margin: 0,
+                }}
+              >
+                {hod.name}
+              </p>
+              <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0" }}>
+                {hod.email}
+              </p>
+              <p style={{ fontSize: 13, color: "#94a3b8", margin: 0 }}>
+                EMP ID: {hod.employee_id} · {hod.designation}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p style={{ fontSize: 14, color: "#64748b" }}>
+            No HOD assigned to this department
+          </p>
+        )}
       </Card>
 
       <Card>
-        <CardTitle>All Faculty Members</CardTitle>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[DEPT.hod, ...FACULTY].map((f) => (
-            <div
-              key={f.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "13px 16px",
-                border: "1.5px solid #f1f5f9",
-                borderRadius: 10,
-                background: f.id === DEPT.hod.id ? "#f0fdf4" : "#fafafa",
-              }}
-            >
-              <Av name={f.name} size={40} green={f.id === DEPT.hod.id} />
-              <div style={{ flex: 1 }}>
-                <p
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: "#1e293b",
-                    margin: 0,
-                  }}
-                >
-                  {f.name}
-                </p>
-                <p
-                  style={{ fontSize: 12, color: "#64748b", margin: "3px 0 0" }}
-                >
-                  {f.designation} · {f.employee_id}
-                </p>
-              </div>
-              {f.id === DEPT.hod.id && <Pill label="Current HOD" green />}
-            </div>
-          ))}
+        <CardTitle>Search Faculty And Select To Assign As HOD</CardTitle>
+        <div className="rounded-lg border w-full overflow-hidden">
+          <SearchBar
+            searching={searchFacultyQuery.isLoading}
+            debounceSearch={debounceSearch}
+            setDebounceSearch={setDebounceSearch}
+            handleClose={() => {
+              setSelectedUser(null);
+              setDebounceSearch("");
+            }}
+          />
+          <TableTemplate
+            columns={userColumns}
+            data={facultyData}
+            isLoading={searchFacultyQuery.isLoading}
+            template={userTemplate}
+            isSelectRequired={true}
+            selectedId={selectedUser}
+            setSelectedId={setSelectedUser}
+          />
         </div>
       </Card>
     </div>
@@ -1445,11 +1525,43 @@ export default function DepartmentModal({
 
   console.log({ currentSelectedId });
 
+  const fetchDepartmentDetailsOnId = async (payload) => {
+    const { id } = payload;
+    const { data } = await axios.get(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/single-department/info/${id}`,
+      {
+        withCredentials: true,
+      },
+    );
+
+    return data.department;
+  };
+
+  const singleDepartmentQuery = useQuery({
+    queryKey: ["singleDepartment", currentSelectedId],
+    queryFn: () => fetchDepartmentDetailsOnId({ id: currentSelectedId }),
+    enabled: !!currentSelectedId,
+  });
+
+  const departmentData = singleDepartmentQuery.data;
+
+  useEffect(() => {
+    if (singleDepartmentQuery.error) {
+      toast.error(
+        singleDepartmentQuery.error?.response?.data?.message ||
+          singleDepartmentQuery.error?.message ||
+          "Failed to fetch department details. Please try again.",
+      );
+    }
+  }, [singleDepartmentQuery.error]);
+
+  console.log(departmentData);
+
   return (
     <>
       {showHOD && (
         <ChangeHODDrawer
-          currentHod={DEPT.hod}
+          currentHod={departmentData?.hod}
           onClose={() => setShowHOD(false)}
         />
       )}
@@ -1457,7 +1569,6 @@ export default function DepartmentModal({
       <Dialog
         open={open}
         onOpenChange={() => {
-          setCurrentSelectedId(null);
           onClose && onClose();
         }}
       >
@@ -1477,108 +1588,136 @@ export default function DepartmentModal({
             gap: 0,
           }}
         >
-          {/* ── Modal Header ── */}
-          <div
-            style={{
-              background: "#fff",
-              padding: "24px 28px 0",
-              borderBottom: "1px solid #e2e8f0",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 16,
-                marginBottom: 22,
-              }}
-            >
+          {singleDepartmentQuery.isLoading ? (
+            <div>loading</div>
+          ) : (
+            <>
               <div
                 style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 14,
-                  background: "#dcfce7",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
+                  background: "#fff",
+                  padding: "24px 28px 0",
+                  borderBottom: "1px solid #e2e8f0",
                 }}
               >
-                <Building2 size={26} color="#16a34a" />
-              </div>
-              <div style={{ flex: 1 }}>
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 10,
-                    flexWrap: "wrap",
+                    gap: 16,
+                    marginBottom: 22,
                   }}
                 >
-                  <DialogTitle>{DEPT.name}</DialogTitle>
-                  <Pill label="Active" green />
-                </div>
-                <p
-                  style={{ fontSize: 13, color: "#94a3b8", margin: "5px 0 0" }}
-                >
-                  Code:{" "}
-                  <strong style={{ color: "#64748b" }}>{DEPT.code}</strong>
-                  &nbsp;·&nbsp; Created: Jan 15, 2023 &nbsp;·&nbsp; Updated: May
-                  20, 2024
-                </p>
-              </div>
-            </div>
-
-            {/* Tab Bar */}
-            <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
-              {TABS.map(({ id, label, icon: Icon }) => {
-                const active = activeTab === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setActiveTab(id)}
+                  <div
                     style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 14,
+                      background: "#dcfce7",
                       display: "flex",
                       alignItems: "center",
-                      gap: 7,
-                      padding: "11px 16px",
-                      fontSize: 13,
-                      fontWeight: active ? 700 : 500,
-                      color: active ? "#16a34a" : "#94a3b8",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      borderBottom: `2.5px solid ${active ? "#16a34a" : "transparent"}`,
-                      whiteSpace: "nowrap",
-                      fontFamily: "inherit",
-                      transition: "all 0.12s",
+                      justifyContent: "center",
+                      flexShrink: 0,
                     }}
                   >
-                    <Icon size={14} />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                    <Building2 size={26} color="#16a34a" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <DialogTitle>{departmentData?.name}</DialogTitle>
+                      <Pill
+                        label={
+                          departmentData?.is_active ? "Active" : "Inactive"
+                        }
+                        green={departmentData?.is_active}
+                        red={departmentData && !departmentData.is_active}
+                      />
+                    </div>
+                    <p
+                      style={{
+                        fontSize: 13,
+                        color: "#94a3b8",
+                        margin: "5px 0 0",
+                      }}
+                    >
+                      Code:{" "}
+                      <strong style={{ color: "#64748b" }}>
+                        {departmentData?.code}
+                      </strong>
+                      &nbsp;·&nbsp; Created:{" "}
+                      {departmentData?.created_at?.split("T")[0]} &nbsp;·&nbsp;
+                      Updated: {departmentData?.updated_at?.split("T")[0]}
+                    </p>
+                  </div>
+                </div>
 
-          {/* ── Tab Content ── */}
-          <div
-            style={{ overflowY: "auto", flex: 1, padding: "24px 28px 32px" }}
-          >
-            {activeTab === "overview" && (
-              <OverviewTab onChangeHOD={() => setShowHOD(true)} />
-            )}
-            {activeTab === "edit" && <EditTab />}
-            {activeTab === "hod" && (
-              <HODTab onChangeHOD={() => setShowHOD(true)} />
-            )}
-            {activeTab === "branches" && <BranchesTab />}
-            {activeTab === "users" && <UsersTab />}
-            {activeTab === "coordinators" && <CoordinatorsTab />}
-            {activeTab === "logs" && <LogsTab />}
-          </div>
+                <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
+                  {TABS.map(({ id, label, icon: Icon }) => {
+                    const active = activeTab === id;
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => setActiveTab(id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 7,
+                          padding: "11px 16px",
+                          fontSize: 13,
+                          fontWeight: active ? 700 : 500,
+                          color: active ? "#16a34a" : "#94a3b8",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          borderBottom: `2.5px solid ${active ? "#16a34a" : "transparent"}`,
+                          whiteSpace: "nowrap",
+                          fontFamily: "inherit",
+                          transition: "all 0.12s",
+                        }}
+                      >
+                        <Icon size={14} />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  overflowY: "auto",
+                  flex: 1,
+                  padding: "24px 28px 32px",
+                }}
+              >
+                {activeTab === "overview" && (
+                  <OverviewTab
+                    onChangeHOD={() => setShowHOD(true)}
+                    department={departmentData}
+                  />
+                )}
+                {activeTab === "edit" && (
+                  <EditTab department={departmentData} activeTab={activeTab} />
+                )}
+                {activeTab === "hod" && (
+                  <HODTab
+                    onChangeHOD={() => setShowHOD(true)}
+                    department={departmentData}
+                  />
+                )}
+                {activeTab === "branches" && <BranchesTab />}
+                {activeTab === "users" && <UsersTab />}
+                {activeTab === "coordinators" && <CoordinatorsTab />}
+                {activeTab === "logs" && <LogsTab />}
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>
