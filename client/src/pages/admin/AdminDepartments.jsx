@@ -333,7 +333,7 @@ const AdminDepartments = () => {
         />
 
         {/* Modal */}
-        {/* <DepartmentModal open={true} onClose={setOpen} /> */}
+        <DepartmentModal open={true} onClose={setOpen} />
       </div>
     </div>
   );
