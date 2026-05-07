@@ -7,6 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import SkeletonRow from "@/mycomponents/shared/SkeletonRow";
+import { Settings } from "lucide-react";
 import React from "react";
 import { useSelector } from "react-redux";
 
@@ -16,6 +17,9 @@ const TableTemplate = ({
   isLoading = false,
   LIMIT = 10,
   template,
+  isActionRequired = false,
+  setModalOpen,
+  setCurrentId,
 }) => {
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
@@ -63,15 +67,30 @@ const TableTemplate = ({
                   style={{ borderBottom: `1px solid ${colors.divider}` }}
                 >
                   {columns.map((col) => {
-                    const config = template[col.key];
-                    if (!config) return null;
+                    if (col.key === "actions" && isActionRequired) {
+                      return (
+                        <TableCell
+                          onClick={() => {
+                            setModalOpen(true);
+                            setCurrentId && setCurrentId(row.id);
+                          }}
+                          key={col.key}
+                          className="cursor-pointer w-10 text-center"
+                        >
+                          <Settings color={colors.textSecondary} size={20} />
+                        </TableCell>
+                      );
+                    } else {
+                      const config = template[col.key];
+                      if (!config) return null;
+                      const cellData = config.getter(row);
 
-                    const cellData = config.getter(row);
-                    return (
-                      <React.Fragment key={col.key}>
-                        {config.renderer(cellData)}
-                      </React.Fragment>
-                    );
+                      return (
+                        <React.Fragment key={col.key}>
+                          {config.renderer(cellData)}
+                        </React.Fragment>
+                      );
+                    }
                   })}
                 </TableRow>
               );

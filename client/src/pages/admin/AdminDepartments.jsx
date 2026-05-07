@@ -35,8 +35,6 @@ import DepartmentModal from "@/mycomponents/admin/modals/DepartmentModal";
 const template = {
   hod: {
     getter: (data) => {
-      console.log("getter", data);
-
       return data.hod && data.hod_id
         ? {
             name: data?.hod?.name,
@@ -112,6 +110,7 @@ const AdminDepartments = () => {
     { key: "hod", label: "HOD" },
     { key: "branchCount", label: "Branches" },
     { key: "studentCount", label: "Students" },
+    { key: "actions", label: "Actions" },
   ];
 
   const LIMIT = 10;
@@ -119,6 +118,9 @@ const AdminDepartments = () => {
   const theme = useSelector((state) => state.theme);
   const colors = theme[theme.currentTheme];
   const [page, setPage] = useState(1);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [currentSelectedId, setCurrentSelectedId] = useState(null);
 
   const [debounceSearch, setDebounceSearch] = useState("");
   // Filter
@@ -317,6 +319,9 @@ const AdminDepartments = () => {
           data={departments}
           template={template}
           isLoading={loading}
+          isActionRequired={true}
+          setModalOpen={setModalOpen}
+          setCurrentId={setCurrentSelectedId}
         />
 
         <PaginationHandler
@@ -333,7 +338,12 @@ const AdminDepartments = () => {
         />
 
         {/* Modal */}
-        <DepartmentModal open={true} onClose={setOpen} />
+        <DepartmentModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          currentSelectedId={currentSelectedId}
+          setCurrentSelectedId={setCurrentSelectedId}
+        />
       </div>
     </div>
   );
