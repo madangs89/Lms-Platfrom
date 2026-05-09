@@ -1,5 +1,8 @@
 import express from "express";
-import { getCountOfBranchesWithTotalActiveInactiveSpecializationsCount } from "../controllers/branches.controler.js";
+import {
+  createBranch,
+  getCountOfBranchesWithTotalActiveInactiveSpecializationsCount,
+} from "../controllers/branches.controler.js";
 import { authMiddleware } from "../middlewares/auth.middelware.js";
 import { adminMiddleware } from "../middlewares/admin.middelwares.js";
 
@@ -10,6 +13,14 @@ branchRouter.get(
   authMiddleware,
   adminMiddleware,
   getCountOfBranchesWithTotalActiveInactiveSpecializationsCount,
+);
+
+// All Post Requests
+branchRouter.post(
+  "/create",
+  authMiddleware,
+  adminMiddleware,
+  createBranch,
 );
 
 export default branchRouter;

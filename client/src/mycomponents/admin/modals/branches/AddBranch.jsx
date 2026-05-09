@@ -16,26 +16,110 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useQueryClient } from "@tanstack/react-query";
+import { Spinner } from "@/components/ui/spinner";
+import { useDepartments } from "@/hooks/useDepartments";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
+import { useCallback, useState } from "react";
+import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const INITIAL_FORM = {
+  department_id: "",
+  name: "",
+  code: "",
+  status: "active",
+};
 
 const AddBranch = ({ open, onClose }) => {
   const currentTheme = useSelector((s) => s.theme.currentTheme);
   const theme = useSelector((s) => s.theme[currentTheme]);
+  const queryClient = useQueryClient();
+
+  const [form, setForm] = useState(INITIAL_FORM);
+
+  // ── Styles ──
   const inputStyle = {
     background: theme.inputBg,
     borderColor: theme.inputBorder,
     color: theme.inputText,
   };
-  const queryClient = useQueryClient();
+
+  const departments = useDepartments({
+    enabled: open,
+  });
+
+  const createBranches = async (payload) => {
+    const { data } = await axios.post(
+      `${import.meta.env.VITE_BACKEND_URL}/api/v1/branch/create`,
+      payload,
+      {
+        withCredentials: true,
+      },
+    );
+
+    return data;
+  };
+
+  const createBranchMutation = useMutation({
+    mutationFn: createBranches,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["branches-counts"] });
+      toast.success("Branch created successfully");
+      resetAndClose();
+    },
+    onError: (error) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to create branch",
+      );
+    },
+  });
+
+  const handleChange = useCallback((field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleSubmit = () => {
+    if (!form.department_id) {
+      toast.error("Department is required");
+      return;
+    }
+    if (!form.name.trim()) {
+      toast.error("Branch name is required");
+      return;
+    }
+    if (!form.code.trim()) {
+      toast.error("Branch code is required");
+      return;
+    }
+
+    createBranchMutation.mutate({
+      department_id: form.department_id,
+      name: form.name.trim(),
+      code: form.code.trim().toUpperCase(),
+      is_active: form.status === "active",
+    });
+  };
+
+  const resetAndClose = useCallback(() => {
+    setForm(INITIAL_FORM);
+    createBranchMutation.reset();
+    onClose();
+  }, [onClose]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={resetAndClose}>
       <DialogContent
         className="flex flex-col gap-0 p-0 overflow-hidden"
         style={{
-          maxWidth: 680,
+          maxWidth: 580,
           width: "calc(100vw - 32px)",
-          maxHeight: "92vh",
           background: theme.surface,
           borderColor: theme.border,
           color: theme.textPrimary,
@@ -50,140 +134,143 @@ const AddBranch = ({ open, onClose }) => {
             className="text-[20px] font-bold leading-snug"
             style={{ color: theme.textPrimary }}
           >
-            Add Department
+            Add Branch
           </DialogTitle>
           <DialogDescription
             className="text-[13px] mt-0.5"
             style={{ color: theme.textSecondary }}
           >
-            Fill in the details to create a new department.
+            Fill in the details to create a new branch.
           </DialogDescription>
         </DialogHeader>
 
-        {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto px-7">
-          {/* ─── Section 1 — Department Information ─── */}
-          <section className="py-5">
-            <h3
-              className="text-[15px] font-bold mb-4"
+        {/* ── Body ── */}
+        <div className="px-7 py-6 flex flex-col gap-5">
+          {/* Department Select */}
+          <div className="flex flex-col gap-1.5">
+            <Label
+              className="text-[13px] font-semibold"
               style={{ color: theme.textPrimary }}
             >
-              1. Department Information
-            </h3>
-
-            {/* Name + Code — side by side, wrap on small screens */}
-            <div className="flex flex-wrap gap-4 mb-4">
-              <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-                <Label
-                  className="text-[13px] font-semibold"
-                  style={{ color: theme.textPrimary }}
-                >
-                  Department Name <span style={{ color: theme.danger }}>*</span>
-                </Label>
-                <Input
-                  placeholder="Enter department name"
-                  value={""}
-                  //   onChange={}
-                  className="h-9 text-sm focus-visible:ring-1 focus-visible:ring-offset-0"
-                  style={inputStyle}
+              Department <span style={{ color: theme.danger }}>*</span>
+            </Label>
+            <Select
+              value={form.department_id}
+              onValueChange={(val) => handleChange("department_id", val)}
+              disabled={departments.isLoading}
+            >
+              <SelectTrigger className="h-9 text-sm focus:ring-1 focus:ring-offset-0">
+                <SelectValue
+                  placeholder={
+                    departments.isLoading ? "Loading…" : "Select a department"
+                  }
                 />
-              </div>
+              </SelectTrigger>
+              <SelectContent
+                style={{
+                  background: theme.surface,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                }}
+              >
+                {departments.data && departments.data.length > 0 ? (
+                  departments.data.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div
+                    className="px-3 py-2 text-[13px]"
+                    style={{ color: theme.textSecondary }}
+                  >
+                    {departments.isLoading ? (
+                      <p>
+                        Loading <Spinner />
+                      </p>
+                    ) : (
+                      "No departments available"
+                    )}
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
 
-              <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-                <Label
-                  className="text-[13px] font-semibold"
-                  style={{ color: theme.textPrimary }}
-                >
-                  Department Code <span style={{ color: theme.danger }}>*</span>
-                </Label>
-                <Input
-                  placeholder="Enter unique department code"
-                  //   value={deptCode}
-                  //   onChange={(e) => setDeptCode(e.target.value)}
-                  className="h-9 text-sm focus-visible:ring-1 focus-visible:ring-offset-0"
-                  style={inputStyle}
-                />
-              </div>
-            </div>
-
-            {/* Status */}
-            <div className="flex flex-col gap-1.5" style={{ maxWidth: 280 }}>
+          {/* Branch Name + Code */}
+          <div className="flex flex-wrap gap-4">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
               <Label
                 className="text-[13px] font-semibold"
                 style={{ color: theme.textPrimary }}
               >
-                Status <span style={{ color: theme.danger }}>*</span>
+                Branch Name <span style={{ color: theme.danger }}>*</span>
               </Label>
-              <Select>
-                <SelectTrigger
-                  className="h-9 text-sm focus:ring-1 focus:ring-offset-0"
-                  style={inputStyle}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent
-                  style={{
-                    background: theme.surface,
-                    borderColor: theme.border,
-                    color: theme.textPrimary,
-                  }}
-                >
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                placeholder="Enter branch name"
+                value={form.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                className="h-9 text-sm focus-visible:ring-1 focus-visible:ring-offset-0"
+              />
             </div>
-          </section>
 
-          {/* Thin divider */}
-          <div className="h-px w-full" style={{ background: theme.divider }} />
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+              <Label
+                className="text-[13px] font-semibold"
+                style={{ color: theme.textPrimary }}
+              >
+                Branch Code <span style={{ color: theme.danger }}>*</span>
+              </Label>
+              <Input
+                placeholder="e.g. CSE-A"
+                value={form.code}
+                onChange={(e) =>
+                  handleChange("code", e.target.value.toUpperCase())
+                }
+                className="h-9 text-sm focus-visible:ring-1 focus-visible:ring-offset-0"
+              />
+            </div>
+          </div>
 
-          {/* ─── Section 2 — Assign HOD ─── */}
-          <section className="py-5">
-            <h3
-              className="text-[15px] font-bold mb-1"
+          {/* Status */}
+          <div className="flex flex-col gap-1.5" style={{ maxWidth: 280 }}>
+            <Label
+              className="text-[13px] font-semibold"
               style={{ color: theme.textPrimary }}
             >
-              2. Assign Head of Department (HOD)
-            </h3>
-            <p
-              className="text-[13px] mb-4"
-              style={{ color: theme.textSecondary }}
+              Status <span style={{ color: theme.danger }}>*</span>
+            </Label>
+            <Select
+              value={form.status}
+              onValueChange={(val) => handleChange("status", val)}
             >
-              Search and select a user to assign as Head of Department.
-            </p>
-
-            {/* Info note */}
-            <div
-              className="flex gap-2.5 items-start rounded-lg mt-3.5 p-3"
-              style={{
-                background: theme.primarySoft,
-                border: `1px solid ${theme.border}`,
-              }}
-            >
-              <span className="text-base shrink-0 mt-px">ℹ️</span>
-              <p
-                className="text-[13px] leading-relaxed m-0"
-                style={{ color: theme.textSecondary }}
+              <SelectTrigger className="h-9 text-sm focus:ring-1 focus:ring-offset-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent
+                style={{
+                  background: theme.surface,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                }}
               >
-                <strong style={{ color: theme.textPrimary }}>Note:</strong> A
-                single user cannot be the HOD of two departments. If the
-                selected user is already assigned as HOD of another department,
-                they will be removed from that department and assigned here.
-              </p>
-            </div>
-          </section>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* ── Footer ── */}
         <DialogFooter
-          className="flex justify-end gap-3 px-7 py-6 shrink-0"
+          className="flex justify-end gap-3 px-7 py-5 shrink-0"
           style={{ borderTop: `1px solid ${theme.divider}` }}
         >
           <Button
             variant="outline"
-            // onClick={resetAndClose}
-            className="text-[13px] font-semibold px-5 h-9"
+            onClick={resetAndClose}
+            disabled={createBranchMutation.isPending}
+            className="text-[13px] font-semibold px-5 h-9 cursor-pointer"
             style={{
               background: "transparent",
               borderColor: theme.border,
@@ -193,16 +280,16 @@ const AddBranch = ({ open, onClose }) => {
             Cancel
           </Button>
           <Button
-            // onClick={handleSubmit}
-            // disabled={createDeptMutation.isPending}
-            className="text-[13px] font-semibold px-5 h-9 hover:opacity-90 transition-opacity disabled:opacity-60"
+            onClick={handleSubmit}
+            disabled={createBranchMutation.isPending}
+            className="text-[13px] font-semibold cursor-pointer px-5 h-9 hover:opacity-90 transition-opacity disabled:opacity-60"
             style={{
               background: theme.primary,
               color: "#fff",
               border: "none",
             }}
           >
-            {"Create Department"}
+            {createBranchMutation.isPending ? <Spinner /> : "Create Branch"}
           </Button>
         </DialogFooter>
       </DialogContent>
