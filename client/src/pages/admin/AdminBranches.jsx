@@ -3,6 +3,7 @@ import { useDepartments } from "@/hooks/useDepartments";
 import Header from "@/mycomponents/admin/Header";
 import MetricCard from "@/mycomponents/admin/MetricCard";
 import AddBranch from "@/mycomponents/admin/modals/branches/AddBranch";
+import BranchModal from "@/mycomponents/admin/modals/branches/BranchModal";
 import SearchBar from "@/mycomponents/admin/SearchBar";
 import SelectHandler from "@/mycomponents/admin/SelectHandler";
 import TableTemplate from "@/mycomponents/admin/TableTemplate";
@@ -23,6 +24,8 @@ const AdminBranches = () => {
 
   const [page, setPage] = useState(1);
   const limit = parseInt(import.meta.env.VITE_LIMIT) || 10;
+  const [currentSelectedId, setCurrentSelectedId] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("active");
   const [departmentFilter, setDepartmentFilter] = useState("all");
 
@@ -199,7 +202,13 @@ const AdminBranches = () => {
                 label="Filter by Department"
                 data={
                   departments.data
-                    ? [{ id: "all", name: "All" }, ...departments.data.map((d) => ({ id: d.id, name: d.name }))]
+                    ? [
+                        { id: "all", name: "All" },
+                        ...departments.data.map((d) => ({
+                          id: d.id,
+                          name: d.name,
+                        })),
+                      ]
                     : []
                 }
               />
@@ -221,8 +230,8 @@ const AdminBranches = () => {
             template={BranchTemplate}
             isLoading={branchesQuery.isLoading}
             isActionRequired={true}
-            // setModalOpen={setModalOpen}
-            // setCurrentId={setCurrentSelectedId}
+            setModalOpen={setModalOpen}
+            setCurrentId={setCurrentSelectedId}
           />
         </div>
         <PaginationHandler
@@ -240,6 +249,11 @@ const AdminBranches = () => {
       </div>
 
       <AddBranch open={open} onClose={() => setOpen(false)} />
+      <BranchModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        currentSelectedId={currentSelectedId}
+      />
     </div>
   );
 };
