@@ -1,5 +1,5 @@
 import { TableCell } from "@/components/ui/table";
-import AddUser from "@/mycomponents/admin/AddUser";
+import AddUser from "@/mycomponents/admin/modals/users/AddUser";
 import Header from "@/mycomponents/admin/Header";
 import MetricCard from "@/mycomponents/admin/MetricCard";
 import SearchBar from "@/mycomponents/admin/SearchBar";

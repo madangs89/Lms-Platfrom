@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
-
 const Header = ({
   colors,
   title,
@@ -27,7 +26,7 @@ const Header = ({
       </div>
       <Button
         onClick={onClick}
-        className="flex items-center gap-1 px-3 h-9 text-[13px] rounded-md flex-shrink-0"
+        className="flex items-center cursor-pointer gap-1 px-3 h-9 text-[13px] rounded-md flex-shrink-0"
         style={{ background: colors.primaryHover, color: colors.sidebarText }}
       >
         <Plus className="w-4 h-4" />

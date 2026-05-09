@@ -30,8 +30,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import PaginationHandler from "@/mycomponents/shared/PaginationHandler";
-import DepartmentModal from "@/mycomponents/admin/modals/DepartmentModal";
-import CreateDepartmentModal from "@/mycomponents/admin/modals/CreateDepartmentModal";
+import DepartmentModal from "@/mycomponents/admin/modals/departments/DepartmentModal";
+import CreateDepartmentModal from "@/mycomponents/admin/modals/departments/CreateDepartmentModal";
 import { DepartmentTableColumns } from "@/configs/template";
 
 const template = {

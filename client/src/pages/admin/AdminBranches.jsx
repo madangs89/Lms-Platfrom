@@ -1,5 +1,6 @@
 import Header from "@/mycomponents/admin/Header";
 import MetricCard from "@/mycomponents/admin/MetricCard";
+import AddBranch from "@/mycomponents/admin/modals/branches/AddBranch";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { CirclePile, House, ShieldBan, Split } from "lucide-react";
@@ -83,6 +84,8 @@ const AdminBranches = () => {
           loading={branchQuery.isLoading}
         />
       </div>
+
+      <AddBranch open={open} onClose={() => setOpen(false)} />
     </div>
   );
 };

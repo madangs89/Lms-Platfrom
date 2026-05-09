@@ -33,9 +33,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { Spinner } from "@/components/ui/spinner";
 import { useSearchFaculty } from "@/hooks/useSearchFaculty";
-import SearchBar from "../SearchBar";
-import TableTemplate from "../TableTemplate";
+import SearchBar from "../../SearchBar";
+
 import { userColumns, userTemplate } from "@/configs/template";
+import TableTemplate from "../../TableTemplate";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

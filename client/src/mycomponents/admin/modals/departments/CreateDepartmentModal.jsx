@@ -24,10 +24,10 @@ import {
 
 import TableTemplate from "@/mycomponents/admin/TableTemplate";
 import { userColumns, userTemplate } from "@/configs/template";
-import SearchBar from "../SearchBar";
 import toast from "react-hot-toast";
 import { Spinner } from "@/components/ui/spinner";
 import { useSearchFaculty } from "@/hooks/useSearchFaculty";
+import SearchBar from "../../SearchBar";
 
 export default function CreateDepartmentModal({ onClose, open }) {
   const currentTheme = useSelector((s) => s.theme.currentTheme);
