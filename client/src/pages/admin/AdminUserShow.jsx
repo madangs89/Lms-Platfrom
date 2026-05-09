@@ -373,6 +373,7 @@ const AdminUserShow = () => {
           data={displayRows}
           isLoading={loading || (isSearchMode && searching)}
           template={userTemplate}
+          isActionRequired={true}
         />
         <PaginationHandler
           page={page}
