@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { userColumns, userTemplate } from "@/configs/template";
 import { useSearchFaculty } from "@/hooks/useSearchFaculty";
+import Avatar from "@/mycomponents/admin/Avatar";
 import SearchBar from "@/mycomponents/admin/SearchBar";
 import SectionCard from "@/mycomponents/admin/SectionCard";
 import TableTemplate from "@/mycomponents/admin/TableTemplate";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { AlertCircle } from "lucide-react";
-import { Avatar } from "radix-ui";
+
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 

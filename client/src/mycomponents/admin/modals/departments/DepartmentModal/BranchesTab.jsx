@@ -1,4 +1,5 @@
 import {
+  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -7,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import SectionCard from "@/mycomponents/admin/SectionCard";
 import StatusBadge from "@/mycomponents/admin/StatusBadge";
-import { BookOpen, Table } from "lucide-react";
+import { BookOpen} from "lucide-react";
 
 function BranchesTab({ department, theme }) {
   const branches = department?.branches ?? [];
