@@ -20,7 +20,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 
@@ -51,6 +51,16 @@ const AddBranch = ({ open, onClose }) => {
     enabled: open,
   });
 
+  useEffect(() => {
+    if (departments.error) {
+      toast.error(
+        departments.error?.response?.data?.message ||
+          departments.error.message ||
+          "Failed to fetch departments",
+      );
+    }
+  }, [departments.error]);
+
   const createBranches = async (payload) => {
     const { data } = await axios.post(
       `${import.meta.env.VITE_BACKEND_URL}/api/v1/branch/create`,
@@ -67,6 +77,8 @@ const AddBranch = ({ open, onClose }) => {
     mutationFn: createBranches,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["branches-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["branches-table"] });
+      queryClient.invalidateQueries({ queryKey: ["branch-search"] });
       toast.success("Branch created successfully");
       resetAndClose();
     },

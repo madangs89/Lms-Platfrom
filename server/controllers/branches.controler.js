@@ -118,3 +118,139 @@ export const createBranch = async (req, res) => {
     });
   }
 };
+
+// This is for Table in AdminBranches.jsx for fetching branches with pagination, filtering by active status and department, and including count of specializations for each branch
+// Used in AdminBranches.jsx for fetching data for table with pagination, filtering and count of specializations for each branch
+export const getAllBranchesWithNameCodeDepartmentSpecializationCountStatus =
+  async (req, res) => {
+    try {
+      const {
+        page = 1,
+        limit = 10,
+        active = "active",
+        department = "all",
+      } = req.params;
+
+      const offset = (page - 1) * parseInt(limit);
+      const whereClause = {};
+
+      if (active === "active") {
+        whereClause.is_active = true;
+      } else if (active === "inactive") {
+        whereClause.is_active = false;
+      }
+
+      if (department !== "all") {
+        whereClause.department_id = department;
+      }
+
+      const [branches, totalCount] = await Promise.all([
+        prisma.branch.findMany({
+          where: whereClause,
+          take: parseInt(limit),
+          skip: parseInt(offset),
+          orderBy: {
+            created_at: "desc",
+          },
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            is_active: true,
+            created_at: true,
+            updated_at: true,
+            department: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+            _count: {
+              select: {
+                specializations: true,
+              },
+            },
+          },
+        }),
+        prisma.branch.count({ where: whereClause }),
+      ]);
+
+      return res.status(200).json({
+        branches,
+        totalCount,
+        success: true,
+        message: "Branches retrieved successfully",
+      });
+    } catch (error) {
+      console.log(error);
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        return res
+          .status(400)
+          .json({ message: "Bad request", error: error.message });
+      }
+      return res
+        .status(500)
+        .json({ message: "Server error", error: error.message });
+    }
+  };
+
+export const searchBranch = async (req, res) => {
+  try {
+    let { query } = req.params;
+    query = query.trim();
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        message: "Search query cannot be empty",
+      });
+    }
+
+    const branches = await prisma.branch.findMany({
+      where: {
+        OR: [
+          {
+            name: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+          {
+            code: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+          {
+            department: {
+              name: {
+                contains: query,
+                mode: "insensitive",
+              },
+            },
+          },
+          {
+            department: {
+              code: {
+                contains: query,
+                mode: "insensitive",
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    return res.status(200).json({
+      branches,
+      success: true,
+      message: "Branches retrieved successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

@@ -67,3 +67,54 @@ export const DepartmentTableColumns = [
   { key: "branchCount", label: "Branches" },
   { key: "studentCount", label: "Students" },
 ];
+
+export const BranchTableColumns = [
+  { key: "name", label: "Branch Name" },
+  { key: "code", label: "Branch Code" },
+  { key: "department", label: "Department" },
+  { key: "is_active", label: "Status" },
+  { key: "specializationCount", label: "Specializations" },
+];
+
+export const BranchTemplate = {
+  name: {
+    getter: (data) => {
+      return {
+        name: data.name,
+      };
+    },
+    renderer: (data) => <TableCellTemplate data={data} />,
+  },
+  code: {
+    getter: (data) => {
+      return {
+        name: data.code,
+      };
+    },
+    renderer: (data) => <TableCellTemplate data={data} />,
+  },
+  department: {
+    getter: (data) => {
+      return {
+        name: data.department?.name || data.department || "—",
+      };
+    },
+    renderer: (data) => <TableCellTemplate data={data} />,
+  },
+  specializationCount: {
+    getter: (data) => {
+      return {
+        name: data._count?.specializations || 0,
+      };
+    },
+    renderer: (data) => <TableCellTemplate data={data} />,
+  },
+  is_active: {
+    getter: (data) => {
+      return {
+        name: data.is_active ? "active" : "inactive",
+      };
+    },
+    renderer: (data) => <StatusCellTemplate data={data} />,
+  },
+};
