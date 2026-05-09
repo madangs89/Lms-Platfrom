@@ -1,4 +1,5 @@
 import AdminLayout from "@/layouts/AdminLayout";
+import AdminBranches from "@/pages/admin/AdminBranches";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminDepartments from "@/pages/admin/AdminDepartments";
 import AdminUserShow from "@/pages/admin/AdminUserShow";
@@ -13,6 +14,7 @@ const AdminRoutes = () => {
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUserShow />} />
           <Route path="departments" element={<AdminDepartments />} />
+          <Route path="branches" element={<AdminBranches />} />
         </Route>
       </Routes>
     </div>

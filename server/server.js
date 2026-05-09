@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import authRouter from "./routes/auth.routes.js";
 import departmentRouter from "./routes/department.routes.js";
 import userRouter from "./routes/user.routes.js";
+import branchRouter from "./routes/branches.routes.js";
 
 const app = express();
 
@@ -13,7 +14,7 @@ app.use(
     origin: `${process.env.CLIENT_URL}`,
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS" , "PATCH"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   }),
 );
 app.use(express.json());
@@ -28,6 +29,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/user", userRouter);
 
 app.use("/api/v1/department", departmentRouter);
+app.use("/api/v1/branch", branchRouter);
 
 app.listen(3000, async () => {
   await connectPrisma();

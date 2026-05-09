@@ -18,6 +18,7 @@ import { useSelector } from "react-redux";
 import TableTemplate from "@/mycomponents/admin/TableTemplate";
 import PaginationHandler from "@/mycomponents/shared/PaginationHandler";
 import { userColumns, userTemplate } from "@/configs/template";
+import { useDepartments } from "@/hooks/useDepartments";
 
 const LIMIT = 5;
 
@@ -195,29 +196,7 @@ const AdminUserShow = () => {
     : (userQuery.data?.users ?? []);
   const isSearchMode = !!debounceSearch.trim();
 
-  const getAllDepartments = async () => {
-    const { data } = await axios.get(
-      `${import.meta.env.VITE_BACKEND_URL}/api/v1/department/active-departments`,
-      { withCredentials: true },
-    );
-
-    return data.departments || [];
-  };
-
-  const departmentQuery = useQuery({
-    queryKey: ["departments"],
-    queryFn: getAllDepartments,
-    retry: 3,
-    refetchOnWindowFocus: false,
-    onError: (err) => {
-      toast.error(
-        err?.response?.data?.message ||
-          err.message ||
-          "Failed to fetch departments",
-      );
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  const departmentQuery = useDepartments({});
 
   const DEPARTMENTS = departmentQuery?.data ?? [];
 
