@@ -2,6 +2,7 @@ import express from "express";
 import {
   createBranch,
   getAllBranchesWithNameCodeDepartmentSpecializationCountStatus,
+  getBranchDetailsById,
   getCountOfBranchesWithTotalActiveInactiveSpecializationsCount,
   searchBranch,
 } from "../controllers/branches.controler.js";
@@ -27,6 +28,12 @@ branchRouter.get(
   authMiddleware,
   adminMiddleware,
   searchBranch,
+);
+branchRouter.get(
+  "/single-branch/info/:id",
+  authMiddleware,
+  adminMiddleware,
+  getBranchDetailsById,
 );
 
 // All Post Requests

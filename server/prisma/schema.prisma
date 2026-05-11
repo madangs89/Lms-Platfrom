@@ -18,6 +18,7 @@ model Department {
   branches               Branch[]
   user                   User[]                   @relation("DepartmentUsers")
   coordinatorAssignments CoordinatorAssignments[]
+  batches                Batches[]
 
   @@index([hod_id])
 }
@@ -33,6 +34,7 @@ model Branch {
   updated_at             DateTime                 @updatedAt
   specializations        Specialization[]
   coordinatorAssignments CoordinatorAssignments[]
+  batches                Batches[]
 
   @@unique([name, department_id])
   @@index([department_id])
@@ -98,8 +100,8 @@ model UserRoles {
   grantedBy  User?    @relation("GrantedBy", fields: [granted_by], references: [id])
   granted_at DateTime @default(now())
 
-  @@index([role])
   @@unique([user_id, role])
+  @@index([role])
   @@index([user_id, role])
 }
 
@@ -129,6 +131,10 @@ model Batches {
   created_at              DateTime                 @default(now())
   updated_at              DateTime                 @updatedAt
   specialization_id       String
+  branch_id               String
+  branch                  Branch                   @relation(fields: [branch_id], references: [id])
+  department_id           String
+  department              Department               @relation(fields: [department_id], references: [id])
   specialization          Specialization           @relation(fields: [specialization_id], references: [id])
   section                 Sections[]
   studentAcademicStatuses StudentAcademicStatus[]

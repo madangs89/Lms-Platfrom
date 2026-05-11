@@ -254,3 +254,165 @@ export const searchBranch = async (req, res) => {
     });
   }
 };
+
+export const getBranchDetailsById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Branch id is required",
+      });
+    }
+
+    const [
+      branch,
+      specializations,
+      activeBatchesCount,
+      totalStudentsCount,
+      totalSectionsCount,
+      facultyMappings,
+    ] = await Promise.all([
+      // Branch Details
+      prisma.branch.findUnique({
+        where: { id },
+
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          is_active: true,
+          created_at: true,
+          updated_at: true,
+
+          department: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              is_active: true,
+              created_at: true,
+              updated_at: true,
+            },
+          },
+
+          _count: {
+            select: {
+              specializations: true,
+            },
+          },
+        },
+      }),
+
+      // Specializations + subject counts
+      prisma.specialization.findMany({
+        where: {
+          branch_id: id,
+        },
+
+        select: {
+          id: true,
+
+          _count: {
+            select: {
+              subjects: true,
+            },
+          },
+        },
+      }),
+
+      // Active batches count
+      prisma.batches.count({
+        where: {
+          branch_id: id,
+          is_active: true,
+        },
+      }),
+
+      // Total students count
+      prisma.studentAcademicStatus.count({
+        where: {
+          is_active: true,
+
+          batch: {
+            branch_id: id,
+          },
+        },
+      }),
+
+      // Total sections count
+      prisma.sections.count({
+        where: {
+          batch: {
+            branch_id: id,
+            is_active: true,
+          },
+        },
+      }),
+
+      // Distinct faculty mappings
+      prisma.facultySpecializationMap.findMany({
+        where: {
+          is_active: true,
+
+          specialization: {
+            branch_id: id,
+          },
+        },
+
+        distinct: ["faculty_id"],
+
+        select: {
+          faculty_id: true,
+        },
+      }),
+    ]);
+
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: "Branch not found",
+      });
+    }
+
+    // Total subjects count
+    const totalSubjectsCount = specializations.reduce((acc, specialization) => {
+      return acc + specialization._count.subjects;
+    }, 0);
+
+    // Total faculty count
+    const totalFacultyCount = facultyMappings.length;
+
+    return res.status(200).json({
+      success: true,
+
+      data: {
+        id: branch.id,
+        name: branch.name,
+        code: branch.code,
+        is_active: branch.is_active,
+        created_at: branch.created_at,
+        updated_at: branch.updated_at,
+
+        department: branch.department,
+
+        statistics: {
+          totalSpecializations: branch._count.specializations,
+          totalSubjects: totalSubjectsCount,
+          activeBatches: activeBatchesCount,
+          totalStudents: totalStudentsCount,
+          totalFaculty: totalFacultyCount,
+          totalSections: totalSectionsCount,
+        },
+      },
+    });
+  } catch (error) {
+    console.log("Get Branch Details Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

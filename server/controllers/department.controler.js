@@ -372,7 +372,6 @@ export const getSingleDepartment = async (req, res) => {
               department_id: true,
               is_active: true,
               code: true,
-
               _count: {
                 select: {
                   specializations: true,

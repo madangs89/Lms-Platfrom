@@ -168,7 +168,7 @@ export default function DepartmentModal({ open, onClose, currentSelectedId }) {
                         className="text-[20px] font-bold leading-tight"
                         style={{ color: theme.textPrimary }}
                       >
-                        {departmentData.name}
+                        {departmentData?.name}
                       </DialogTitle>
                       <StatusBadge active={departmentData.is_active} />
                     </div>
@@ -240,6 +240,25 @@ export default function DepartmentModal({ open, onClose, currentSelectedId }) {
               </div>
             </>
           )}
+
+        {/* Tab Content */}
+        <div
+          className="flex-1 overflow-y-auto"
+          style={{ padding: "24px 28px 32px" }}
+        >
+          {activeTab === "overview" && (
+            <OverviewTab department={departmentData} theme={theme} />
+          )}
+          {activeTab === "edit" && (
+            <EditTab department={departmentData} theme={theme} />
+          )}
+          {activeTab === "hod" && (
+            <HODTab department={departmentData} theme={theme} />
+          )}
+          {activeTab === "branches" && (
+            <BranchesTab department={departmentData} theme={theme} />
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
