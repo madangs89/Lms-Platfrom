@@ -478,3 +478,81 @@ export const updateBranch = async (req, res) => {
     });
   }
 };
+
+// update department for branch
+export const updateDepartmentForBrach = async (req, res) => {
+  try {
+    const { branch_id, department_id } = req.body;
+    if (!branch_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Branch id is required",
+      });
+    }
+    if (!department_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Department id is required",
+      });
+    }
+
+    const branchDetails = await prisma.branch.findFirst({
+      where: {
+        id: branch_id,
+      },
+      select: {
+        department: true,
+      },
+    });
+
+    if (!branchDetails) {
+      return res.status(404).json({
+        success: false,
+        message: "Branch not found",
+      });
+    }
+    if (branchDetails.department.id === department_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Branch is already associated with the selected department",
+      });
+    }
+
+    const updatedBranch = await prisma.branch.update({
+      where: {
+        id: branch_id,
+      },
+      data: {
+        department_id,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Branch department updated successfully",
+      branch: updatedBranch,
+    });
+  } catch (error) {
+    console.log(error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        return res.status(409).json({
+          success: false,
+          message: "Branch with this department already exists",
+        });
+      }
+      if (error.code === "P2003") {
+        return res.status(400).json({
+          success: false,
+          message: "Branch id or Department id does not exist",
+        });
+      }
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

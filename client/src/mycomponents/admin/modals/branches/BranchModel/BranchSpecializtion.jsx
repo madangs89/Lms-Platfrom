@@ -12,7 +12,6 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { BookOpen, Loader2 } from "lucide-react";
 
-
 const BranchSpecialization = ({ theme, branch, enabled }) => {
   const fetchSpecialization = async () => {
     const { data } = await axios.get(

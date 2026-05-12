@@ -6,6 +6,7 @@ import {
   getCountOfBranchesWithTotalActiveInactiveSpecializationsCount,
   searchBranch,
   updateBranch,
+  updateDepartmentForBrach,
 } from "../controllers/branches.controler.js";
 import { authMiddleware } from "../middlewares/auth.middelware.js";
 import { adminMiddleware } from "../middlewares/admin.middelwares.js";
@@ -46,6 +47,12 @@ branchRouter.patch(
   authMiddleware,
   adminMiddleware,
   updateBranch,
+);
+branchRouter.patch(
+  "/update/department",
+  authMiddleware,
+  adminMiddleware,
+  updateDepartmentForBrach,
 );
 
 export default branchRouter;
