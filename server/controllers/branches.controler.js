@@ -416,3 +416,65 @@ export const getBranchDetailsById = async (req, res) => {
     });
   }
 };
+
+// Updating the Branch
+export const updateBranch = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, code, is_active } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Branch id is required",
+      });
+    }
+
+    const updatedBranch = await prisma.branch.update({
+      where: {
+        id,
+      },
+      data: {
+        name,
+        code,
+        is_active,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Branch updated successfully",
+      branch: updatedBranch,
+    });
+  } catch (error) {
+    console.log(error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        return res.status(409).json({
+          success: false,
+          message:
+            "Branch code already exists or branch name already exists in this department",
+        });
+      }
+
+      if (error.code === "P2003") {
+        return res.status(400).json({
+          success: false,
+          message: "Selected department does not exist",
+        });
+      }
+
+      if (error.code === "P2000") {
+        return res.status(400).json({
+          success: false,
+          message: "Name or code exceeds allowed length",
+        });
+      }
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

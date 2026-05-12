@@ -6,6 +6,7 @@ import authRouter from "./routes/auth.routes.js";
 import departmentRouter from "./routes/department.routes.js";
 import userRouter from "./routes/user.routes.js";
 import branchRouter from "./routes/branches.routes.js";
+import specializationRouter from "./routes/specialization.routes.js";
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/api/v1/user", userRouter);
 
 app.use("/api/v1/department", departmentRouter);
 app.use("/api/v1/branch", branchRouter);
+app.use("/api/v1/specialization", specializationRouter);
 
 app.listen(3000, async () => {
   await connectPrisma();

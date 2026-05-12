@@ -8,7 +8,7 @@ function InfoRow({ label, children, theme }) {
         {label}
       </span>
       <span
-        className="text-[13px] font-semibold"
+        className="text-[13px] ml-3 font-semibold"
         style={{ color: theme.textPrimary }}
       >
         {children}

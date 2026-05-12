@@ -9,10 +9,11 @@ import toast from "react-hot-toast";
 import HeaderSkeleton from "../../HeaderSkeleton";
 import OverviewSkeleton from "../../OverviewSkeleton";
 import BranchOverView from "./BranchModel/BranchOverView";
+import BranchEdit from "./BranchModel/BranchEdit";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: Building2 },
-  { id: "edit", label: "Edit Department", icon: ScrollText },
+  { id: "edit", label: "Edit Branch", icon: ScrollText },
   { id: "hod", label: "HOD Management", icon: UserCheck },
   { id: "branches", label: "Branches", icon: BookOpen },
 ];
@@ -146,23 +147,19 @@ const BranchModal = ({ open, onClose, currentSelectedId }) => {
           )}
 
         {/* Tab Content */}
-        <div
-          className="flex-1 overflow-y-auto"
-          style={{ padding: "24px 28px 32px" }}
-        >
-          {activeTab === "overview" && (
-            <BranchOverView branchData={branchData} theme={theme} />
-          )}
-          {/* {activeTab === "edit" && (
-            <EditTab department={departmentData} theme={theme} />
-          )}
-          {activeTab === "hod" && (
-            <HODTab department={departmentData} theme={theme} />
-          )}
-          {activeTab === "branches" && (
-            <BranchesTab department={departmentData} theme={theme} />
-          )} */}
-        </div>
+        {!singleBranchQuery.isLoading && (
+          <div
+            className="flex-1 overflow-y-auto"
+            style={{ padding: "24px 28px 32px" }}
+          >
+            {activeTab === "overview" && (
+              <BranchOverView branchData={branchData} theme={theme} />
+            )}
+            {activeTab === "edit" && (
+              <BranchEdit branch={branchData} theme={theme} />
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

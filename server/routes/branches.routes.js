@@ -5,6 +5,7 @@ import {
   getBranchDetailsById,
   getCountOfBranchesWithTotalActiveInactiveSpecializationsCount,
   searchBranch,
+  updateBranch,
 } from "../controllers/branches.controler.js";
 import { authMiddleware } from "../middlewares/auth.middelware.js";
 import { adminMiddleware } from "../middlewares/admin.middelwares.js";
@@ -38,5 +39,13 @@ branchRouter.get(
 
 // All Post Requests
 branchRouter.post("/create", authMiddleware, adminMiddleware, createBranch);
+
+// update request
+branchRouter.patch(
+  "/update/info/:id",
+  authMiddleware,
+  adminMiddleware,
+  updateBranch,
+);
 
 export default branchRouter;
