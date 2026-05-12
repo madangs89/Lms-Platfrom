@@ -10,12 +10,13 @@ import HeaderSkeleton from "../../HeaderSkeleton";
 import OverviewSkeleton from "../../OverviewSkeleton";
 import BranchOverView from "./BranchModel/BranchOverView";
 import BranchEdit from "./BranchModel/BranchEdit";
+import BranchSpecialization from "./BranchModel/BranchSpecializtion";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: Building2 },
   { id: "edit", label: "Edit Branch", icon: ScrollText },
   { id: "hod", label: "HOD Management", icon: UserCheck },
-  { id: "branches", label: "Branches", icon: BookOpen },
+  { id: "specialization", label: "Specialization", icon: BookOpen },
 ];
 
 const BranchModal = ({ open, onClose, currentSelectedId }) => {
@@ -157,6 +158,13 @@ const BranchModal = ({ open, onClose, currentSelectedId }) => {
             )}
             {activeTab === "edit" && (
               <BranchEdit branch={branchData} theme={theme} />
+            )}
+            {activeTab === "specialization" && (
+              <BranchSpecialization
+                branch={branchData}
+                theme={theme}
+                enabled={activeTab === "specialization"}
+              />
             )}
           </div>
         )}
